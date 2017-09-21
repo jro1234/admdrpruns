@@ -80,7 +80,7 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
                 xlength += minlength - tlength
 
         if xlength > n_steps / 2:
-            tasks.append(t.extend(xlength))
+            tasks.append(t.extend(xlength, export_path=export_path))
 
     if n_run is not None and len(tasks) > n_run:
         tasks = tasks[:n_run]
@@ -108,7 +108,9 @@ def model_task(project, modeller, margs, trajectories=None):
 def strategy_pllMD(project, engine, n_run, n_ext, n_steps,
                    modellers=None, fixedlength=True, longest=5000,
                    continuing=True, minlength=None, randomly=False,
-                   n_rounds=0, **kwargs):
+                   n_rounds=0,
+                   export_path='export PATH="/lustre/atlas/proj-shared/bip149/jrossyra/miniconda2/bin:$PATH"',
+                   **kwargs):
 
     c = counter(n_rounds)
 
@@ -146,7 +148,7 @@ def strategy_pllMD(project, engine, n_run, n_ext, n_steps,
         tasks = list()
 
         [tasks.append(project.new_trajectory(
-         engine['pdb_file'], rb, engine).run())
+         engine['pdb_file'], rb, engine).run(export_path=export_path))
          for rb in randbreak]
 
         if not n_rounds or not c.done:
@@ -196,7 +198,7 @@ def strategy_pllMD(project, engine, n_run, n_ext, n_steps,
 
                 #print(trajectories)
                 if not n_rounds or not c.done:
-                    [tasks.append(t.run()) for t in trajectories]
+                    [tasks.append(t.run(export_path=export_path)) for t in trajectories]
                     for task in tasks:
                         project.queue(task)
                         time.sleep(0.1)
@@ -241,7 +243,7 @@ def strategy_pllMD(project, engine, n_run, n_ext, n_steps,
                 trajectories = project.new_ml_trajectory(engine, unrandbreak, n_run, randomly)
 
                 #print(trajectories)
-                [tasks.append(t.run()) for t in trajectories]
+                [tasks.append(t.run(export_path=export_path)) for t in trajectories]
                 if not n_rounds or not c.done:
                     c.increment()
                     project.queue(tasks)
@@ -261,7 +263,7 @@ def strategy_pllMD(project, engine, n_run, n_ext, n_steps,
 
                 if not n_rounds or not c.done:
                     c.increment()
-                    [tasks.append(t.run()) for t in trajectories]
+                    [tasks.append(t.run(export_path=export_path)) for t in trajectories]
                     project.queue(tasks)
 
                 if mtask.is_done():
@@ -498,6 +500,7 @@ def init_project(p_name, sys_name, m_freq, p_freq,
     #    Project.delete(p_name)
 
     if dblocation is not None:
+
         Project.set_dblocation(dblocation)
 
     project = Project(p_name)

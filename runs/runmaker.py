@@ -43,7 +43,7 @@ if __name__ == "__main__":
             longts='--longts' if args.longts else '',
             randomly='-R' if args.randomly else '',
             strategy=args.strategy,
-            dblocation=args.dblocation
+            dblocation=args.dblocation,
             platform=args.platform,
             n_rounds=args.n_rounds,
             minlength=args.minlength if args.minlength > args.length else args.length,

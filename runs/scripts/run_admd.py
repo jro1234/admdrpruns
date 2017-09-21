@@ -11,7 +11,7 @@ from __future__ import print_function
 # Import custom adaptivemd init & strategy functions
 from _argparser import argparser
 from __run_admd import init_project, strategy_pllMD
-from adaptivemd.rp import Client
+from adaptivemd.rp.client import Client
 from sys import exit
 import time
 

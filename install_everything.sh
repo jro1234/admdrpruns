@@ -2,46 +2,63 @@
 
 CWD=`pwd`
 ### Paths for different installer components
+#INSTALL_CONDA=$PROJWORK/bip149/$USER/
 INSTALL_ENV=$PROJWORK/bip149/$USER/admdrp/
-INSTALL_ADAPTIVEMD=$PROJWORK/bip149/$USER/admdrp/adaptivemd/
+## these ones saved to environment variables
+INSTALL_ADAPTIVEMD=$PROJWORK/bip149/$USER/adaptivemd/
 INSTALL_ADMDRP_DATA=$MEMBERWORK/bip149/admdrp/
 INSTALL_ADMDRP_RUNS=$MEMBERWORK/bip149/admdrp/runs
+#INSTALL_ADMD_DB=$PROJWORK/bip149/$USER/
 
 
 ## Options & Version configuration stuff:
 ADAPTIVEMD_VERSION=jrossyra/adaptivemd.git
 ADAPTIVEMD_BRANCH=rp_integration
+GPU_ENV=cudatoolkit
+#CONDA_VERSION=2
+OPENMM_VERSION=7.0
+#MONGODB_VERSION=3.3.0
+PYMONGO_VERSION=3.5.1
+PYEMMA_VERSION=2.4
+
+## Environment preparation:
+module load $GPU_ENV
 
 ###############################################################################
+#
 #  Install Env, RP, AdaptiveMD
+#
 ###############################################################################
 mkdir $INSTALL_ENV
 cd $INSTALL_ENV
 module load python/2.7.9
-virtualenv $INSTALL_ENV/admdrpenv
-
+#pip install virtualenv
+virtualenv --python=`which python` $INSTALL_ENV/admdrpenv
 echo "export ADMDRP_ENV=${INSTALL_ENV}admdrpenv/" >> ~/.bashrc
-
-echo "# MORE ENVIRONMENT VARIABLES" >> ${INSTALL_ENV}/admdrpenv/bin/activate
-echo "export LD_PRELOAD=/lib64/librt.so.1" >> ${INSTALL_ENV}/admdrpenv/bin/activate
-echo "export RP_ENABLE_OLD_DEFINES=True" >> ${INSTALL_ENV}/admdrpenv/bin/activate
-echo "export RADICAL_PILOT_DBURL='mongodb://admin:v3ry2r4d1c4l@openshift.ccs.ornl.gov:30008/rp'" >> ${INSTALL_ENV}/admdrpenv/bin/activate
 
 source ~/.bashrc
 source ${ADMDRP_ENV}bin/activate
+which python
+mkdir rp
+cd rp/
 
-mkdir $INSTALL_ADAPTIVEMD
+git clone https://github.com/radical-cybertools/saga-python.git
+git clone https://github.com/radical-cybertools/radical.pilot.git
+git clone https://github.com/radical-cybertools/radical.utils.git
+
+pip install radical.utils/ saga-python/ radical.pilot/
+# what to do for this on titan?
+#cd ~ && "/bin/cp" -v  "/tmp/rs_pty_staging_4rWMPI.tmp" ".saga/adaptors/shell_job//wrapper.sh"
+
 cd $INSTALL_ADAPTIVEMD
-git clone https://github.com/$ADAPTIVEMD_VERSION
-cd adaptivemd
+#git clone https://github.com/$ADAPTIVEMD_VERSION
 git checkout $ADAPTIVEMD_BRANCH
-pip install pyyaml
-pip install six
-pip install zmq
-deactivate
-source ${ADMDRP_ENV}bin/activate
+git pull
+#python setup.py develop
+pip install ujson pyyaml numpy cython pymongo==$PYMONGO_VERSION
 pip install .
 python -c "import adaptivemd" || echo "something wrong with adaptivemd install"
+#echo "export ADAPTIVEMD=${INSTALL_ADAPTIVEMD}adaptivemd/" >> ~/.bashrc
 
 mkdir $INSTALL_ADMDRP_DATA
 cd $INSTALL_ADMDRP_DATA

@@ -4,14 +4,15 @@
 # Load the environment we are going to use.
 # - AdaptiveMD and RP are installed
 #   under this environment.
-source /lustre/atlas/proj-shared/bip149/jrossyra/admdrpenv/bin/activate
+source /lustre/atlas/proj-shared/bip149/jrossyra/admdrp/admdrpenv/bin/activate
 
 
 ADMDRP_RUNS=/lustre/atlas/scratch/jrossyra/bip149/admdrprun/
 DB_HOSTNAME=\'{dblocation}\'
 
-export RP_ENABLE_OLD_DEFINES=True
-export RADICAL_PILOT_DBURL=$DB_HOSTNAME
+# THIS is already in the virtualenv
+#export RP_ENABLE_OLD_DEFINES=True
+#export RADICAL_PILOT_DBURL=$DB_HOSTNAME
 
 
 # Sort out some stuff
