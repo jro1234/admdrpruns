@@ -34,7 +34,6 @@ if __name__ == '__main__':
     print("Initializing Project named: ", args.project_name)
     # send selections and frequencies as kwargs
     #fix1#project = init_project(p_name, del_existing, **freq)
-    print("Worker threads: {0}".format(args.w_threads))
     print(args)
     project = init_project(args.project_name,
                            args.system_name,
