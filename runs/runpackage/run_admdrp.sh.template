@@ -4,15 +4,15 @@
 # Load the environment we are going to use.
 # - AdaptiveMD and RP are installed
 #   under this environment.
-source /lustre/atlas/proj-shared/bip149/jrossyra/admdrp/admdrpenv/bin/activate
+source /lustre/atlas/proj-shared/bip149/$USER/admdrp/admdrpenv/bin/activate
 
 
-ADMDRP_RUNS=/lustre/atlas/scratch/jrossyra/bip149/admdrprun/
+ADMDRP_RUNS=/lustre/atlas/scratch/$USER/bip149/admdrp/runs/
 DB_HOSTNAME={dblocation}
 
 # THIS is already in the virtualenv
 #export RP_ENABLE_OLD_DEFINES=True
-export RADICAL_PILOT_DBURL=\'mongodb://${DB_HOSTNAME}\'
+export RADICAL_PILOT_DBURL=\'mongodb://${{DB_HOSTNAME}}/rp\'
 
 
 # Sort out some stuff
@@ -23,7 +23,7 @@ ADMD_SCRIPT=${{ADMDRP_RUNS}}scripts/$SCRIPT_NAME
 
 
 # Initialize the run
-python $ADMD_SCRIPT $RUNNAME {system_name} --init_only --dblocatoin $DB_HOSTNAME -P {platform} -p {prot} -m {all}
+python $ADMD_SCRIPT $RUNNAME {system_name} --init_only --dblocation $DB_HOSTNAME -P {platform} -p {prot} -m {all}
 
 
 # Execute the run

@@ -290,11 +290,11 @@ def strategy_pllMD(project, engine, n_run, n_ext, n_steps,
     #final_margs = dict(tica_stride=10, tica_lag=50, tica_dim=6,
     #    clust_stride=10, msm_states=100, msm_lag=5)
 
-    start_margs = dict(tica_stride=4, tica_lag=50, tica_dim=4,
-        clust_stride=1, msm_states=100, msm_lag=50)
+    start_margs = dict(tica_stride=2, tica_lag=20, tica_dim=2,
+        clust_stride=1, msm_states=50, msm_lag=20)
 
-    final_margs = dict(tica_stride=4, tica_lag=50, tica_dim=6,
-        clust_stride=2, msm_states=400, msm_lag=25)
+    final_margs = dict(tica_stride=2, tica_lag=20, tica_dim=2,
+        clust_stride=1, msm_states=50, msm_lag=20)
 
     def update_margs():
         margs=dict()
@@ -529,7 +529,7 @@ def init_project(p_name, sys_name, m_freq, p_freq,
 
         # only works if filestructure is preserved as described in 'jro_ntl9.ipynb'
         # and something akin to job script in 'admd_workers.pbs' is used
-        f_base = 'file:///lustre/atlas/proj-shared/bip149/jrossyra/adaptivemd/examples/files/{0}/'.format(sys_name)
+        f_base = 'file:///lustre/atlas/proj-shared/bip149/jrossyra/admdrp/adaptivemd/examples/files/{0}/'.format(sys_name)
 
         f_structure = File(f_base + f_name).load()
 
