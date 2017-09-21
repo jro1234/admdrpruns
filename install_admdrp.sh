@@ -30,16 +30,18 @@ echo "export RADICAL_PILOT_DBURL='mongodb://admin:v3ry2r4d1c4l@openshift.ccs.orn
 source ~/.bashrc
 source ${ADMDRP_ENV}bin/activate
 
-mkdir $INSTALL_ADAPTIVEMD
-cd $INSTALL_ADAPTIVEMD
+#mkdir $INSTALL_ADAPTIVEMD
+#cd $INSTALL_ADAPTIVEMD
 git clone https://github.com/$ADAPTIVEMD_VERSION
 cd adaptivemd
 git checkout $ADAPTIVEMD_BRANCH
 pip install pyyaml
 pip install six
 pip install zmq
+
 deactivate
 source ${ADMDRP_ENV}bin/activate
+
 pip install .
 python -c "import adaptivemd" || echo "something wrong with adaptivemd install"
 
