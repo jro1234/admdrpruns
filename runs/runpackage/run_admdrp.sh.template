@@ -12,7 +12,7 @@ DB_HOSTNAME={dblocation}
 
 # THIS is already in the virtualenv
 #export RP_ENABLE_OLD_DEFINES=True
-export RADICAL_PILOT_DBURL=\'mongodb://${{DB_HOSTNAME}}/rp\'
+export RADICAL_PILOT_DBURL=mongodb://${{DB_HOSTNAME}}/rp
 
 
 # Sort out some stuff
