@@ -503,13 +503,17 @@ def init_project(p_name, sys_name, m_freq, p_freq,
 
         Project.set_dblocation(dblocation)
 
-    project = Project(p_name)
+    #project = Project(p_name)
 
-    if project.name in Project.list():
+    if p_name in Project.list():
         print("Project {0} exists, reading it from database"
-              .format(project.name))
+              .format(p_name))
+
+        project = Project(p_name)
 
     else:
+
+        project = Project(p_name)
 
         from adaptivemd import File, OpenMMEngine
         from adaptivemd.analysis.pyemma import PyEMMAAnalysis

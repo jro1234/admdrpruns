@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
 
         print("dburl: ", project.storage._db_url)
-        client = Client(project.storage._db_url, project.name)
+        client = Client(project.storage._db_url+'/', project.name)
         cpus, wallminutes, gpus = calculate_request(
                                       args.n_traj+1,
                                       args.n_rounds,

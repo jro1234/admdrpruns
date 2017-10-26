@@ -4,10 +4,8 @@
 # Load the environment we are going to use.
 # - AdaptiveMD and RP are installed
 #   under this environment.
-source /lustre/atlas/proj-shared/bip149/$USER/admdrp/admdrpenv/bin/activate
+source $ADMDRP_ENV/bin/activate
 
-
-ADMDRP_RUNS=/lustre/atlas/scratch/$USER/bip149/admdrp/runs/
 DB_HOSTNAME={dblocation}
 
 # THIS is already in the virtualenv
@@ -19,7 +17,7 @@ export RADICAL_PILOT_DBURL=mongodb://${{DB_HOSTNAME}}/rp
 RUNNAME={project_name}
 
 SCRIPT_NAME={strategy}
-ADMD_SCRIPT=${{ADMDRP_RUNS}}scripts/$SCRIPT_NAME
+ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
 
 
 # Initialize the run
