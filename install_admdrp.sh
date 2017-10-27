@@ -55,7 +55,7 @@ echo "export ADMDRP_ENV=${INSTALL_ENV}admdrpenv/" >> ~/.bashrc
 echo "# MORE ENVIRONMENT VARIABLES" >> ${INSTALL_ENV}/admdrpenv/bin/activate
 echo "export LD_PRELOAD=/lib64/librt.so.1" >> ${INSTALL_ENV}/admdrpenv/bin/activate
 echo "export RP_ENABLE_OLD_DEFINES=True" >> ${INSTALL_ENV}/admdrpenv/bin/activate
-echo "export RADICAL_PILOT_DBURL='mongodb://admin:v3ry2r4d1c4l@openshift.ccs.ornl.gov:30008/rp'" >> ${INSTALL_ENV}/admdrpenv/bin/activate
+echo "export RADICAL_PILOT_DBURL='mongodb://rp:rp@ds015335.mlab.com:15335/rp'" >> ${INSTALL_ENV}/admdrpenv/bin/activate
 
 source ~/.bashrc
 source ${ADMDRP_ENV}bin/activate
