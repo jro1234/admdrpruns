@@ -22,9 +22,8 @@ def argparser():
         help="Number of trajectories to create",
         type=int, default=16)
 
-    parser.add_argument("-M","--model", dest="model",
-        help="Create a model each iteration",
-        action='store_true')
+    parser.add_argument("-M","--modeller",
+        help="Create a model each iteration")
 
     parser.add_argument("-x","--n-extension", dest="n_ext",
         help="Number of extensions to trajectories",
@@ -42,16 +41,19 @@ def argparser():
         help="Number of task rounds inside a single PBS job",
         type=int, default=0)
 
+    parser.add_argument("-e","--environment", nargs='*',
+        help="Environment for running tasks")
+
+    parser.add_argument("-A","--activate_prefix",
+        help="Prefix for activate script",
+        type=str, default="$CONDAPATH")
+
     parser.add_argument("-k","--minlength",
         help="Minimum trajectory total length in frames",
         type=int, default=300)
 
     parser.add_argument("-f","--fixedlength",
         help="Default randomizes traj length, flag to fix to n_steps",
-        action='store_true')
-
-    parser.add_argument("-R","--randomly",
-        help="Purely random sampling",
         action='store_true')
 
     parser.add_argument("-p","--protein-stride", dest="prot",
@@ -74,8 +76,36 @@ def argparser():
         help="Filename of strategy script to run for generating tasks",
         type=str, default="run_admd.py")
 
+    parser.add_argument("-S","--sampling_function",
+        help="Name of sampling function saved in sampling_functions.py",
+        type=str, default="random_restart")
+
     parser.add_argument("-i","--template", dest="template",
         help="Input job template file, ie admd_workers.pbs",
         type=str, default="run_admdrp.sh")
+
+    parser.add_argument("--tica_lag",
+        help="TICA lag in frames",
+        type=int, default=25)
+
+    parser.add_argument("--tica_dim",
+        help="Number of TICA dimensions for clustering",
+        type=int, default=3)
+
+    parser.add_argument("--tica_stride",
+        help="TICA stride in frames",
+        type=int, default=5)
+
+    parser.add_argument("--clust_stride",
+        help="Clustering stride in frames",
+        type=int, default=5)
+
+    parser.add_argument("--msm_lag",
+        help="MSM lag in frames",
+        type=int, default=25)
+
+    parser.add_argument("--msm_states",
+        help="MISLEADING name, number of microstates for clustering",
+        type=int, default=50)
 
     return parser

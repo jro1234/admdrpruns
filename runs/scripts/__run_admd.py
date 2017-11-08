@@ -105,7 +105,7 @@ def model_task(project, modeller, margs, trajectories=None):
 
 
 
-def strategy_pllMD(project, engine, n_run, n_ext, n_steps,
+def strategy_function(project, engine, n_run, n_ext, n_steps,
                    modellers=None, fixedlength=True, longest=5000,
                    continuing=True, minlength=None, randomly=False,
                    n_rounds=0,

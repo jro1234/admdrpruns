@@ -10,18 +10,49 @@ from __future__ import print_function
 
 # Import custom adaptivemd init & strategy functions
 from _argparser import argparser
-from __run_admd import init_project, strategy_pllMD
+from __run_admd import init_project, strategy_function
 from adaptivemd.rp.client import Client
 from sys import exit
 import time
 
 
 
-def calculate_request(n_workload, n_rounds, n_steps, steprate):
+def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
+    '''
+    Calculate the parameters for resource request done by RP.
+    The workload to execute will be assessed to estimate these
+    required parameters.
+    -- Function in progress, also requires a minimum time
+       and cpus per node. Need to decide how these will be
+       calculated and managed in general.
+
+    n_workload : <int>
+    For now, this is like the number of nodes that will be used.
+    With OpenMM Simulations and the 1-node PyEMMA tasks, this is
+    also the number of tasks per workload. Clearly a name conflict...
+
+    n_rounds : <int>
+    Number of workload iterations or rounds. The model here
+    is that the workloads are approximately identical, maybe
+    some will not include new modeller tasks but otherwise
+    should be the same.
+
+    n_steps : <int>
+    Number of simulation steps in each task.
+
+    steprate : <int>
+    Number of simulation steps per minute. Use a low-side
+    estimate to ensure jobs don't timeout before the tasks
+    are completed.
+    '''
 
     cpus = n_workload * 16
     gpus = n_workload
-    wallminutes = int(n_steps * n_rounds / steprate / 60)
+    print("n_steps: ", n_steps, "\nn_rounds: ", n_rounds, "\nsteprate: ", steprate)
+
+    # 5 minutes padding for initialization & such
+    # as the minimum walltime
+    wallminutes = 5 + int(n_steps * n_rounds / steprate)
 
     return cpus, wallminutes, gpus 
 
@@ -48,7 +79,7 @@ if __name__ == '__main__':
 
     else:
         print("Adding event to project from function:")
-        print(strategy_pllMD)
+        print(strategy_function)
 
         if  args.longts:
             ext = '-5'
@@ -56,41 +87,38 @@ if __name__ == '__main__':
             ext = '-2'
 
         nm_engine = 'openmm' + ext
-        nm_modeller_1 = 'pyemma-ca' + ext
-        nm_modeller_2 = 'pyemma-ionic' + ext
+        nm_modeller = args.modeller + ext
 
         engine = project.generators[nm_engine]
-
-        if args.model:
-            modellers = list()
-            modellers.append(project.generators[nm_modeller_1])
-            modellers.append(project.generators[nm_modeller_2])
-
-        else:
-            modellers = None
-
+        modeller = project.generators[nm_modeller]
 
         print("dburl: ", project.storage._db_url)
-        client = Client(project.storage._db_url+'/', project.name)
-        cpus, wallminutes, gpus = calculate_request(
+
+        cpus, walltime, gpus = calculate_request(
                                       args.n_traj+1,
                                       args.n_rounds,
-                                      args.length,
-                                      steprate=250)
+                                      args.length)#, steprate)
 
-        project.request_resource(cpus, wallminutes, gpus, 'current')
+        print("Resource request arguments: ")
+        print("cpus: ", cpus)
+        print("walltime: ", walltime)
+        print("gpus: ", gpus)
+
+        project.request_resource(cpus, walltime, gpus, 'current')
+
+        client = Client(project.storage._db_url+'/', project.name)
         client.start()
 
         start_time = time.time()
-        print("TIMER Project add event {0:.5f}", time.time())
-        project.add_event(strategy_pllMD(
+        print("TIMER Project add event {0:.5f}".format(time.time()))
+        project.add_event(strategy_function(
             project, engine, args.n_traj,
             args.n_ext, args.length,
-            modellers=modellers,
-            fixedlength=args.fixedlength,
+            modeller=modeller,
+            fixedlength=True,#args.fixedlength,
             minlength=args.minlength,
             n_rounds=args.n_rounds,
-            randomly=args.randomly,
+            environment=args.environment[0] if args.environment else args.environment,
             longest=args.all))
 
         print("Triggering project")
@@ -102,4 +130,5 @@ if __name__ == '__main__':
 
     print("Exiting Event Script")
     project.close()
+
 

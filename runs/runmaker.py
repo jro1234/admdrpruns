@@ -18,8 +18,12 @@ if __name__ == "__main__":
     parser = argparser()
     args = parser.parse_args()
 
+    runs = 'runpackage/'
     run_filename = args.template
-    run_template = 'runpackage/{0}.template'.format(run_filename)
+    run_template = runs + '{0}.template'.format(run_filename)
+    margs_filename = 'margs.cfg'
+    margs_template = runs + '{0}.template'.format(margs_filename)
+
     print("Reading run script template from:\n", run_template)
 
     run_name = '{0}'.format(args.project_name)
@@ -27,11 +31,24 @@ if __name__ == "__main__":
 
     print("Job will be located in directory:\n", run_folder)
     run_file = run_folder + run_filename
+    margs_file = run_folder + margs_filename
 
     os.mkdir(run_folder)
 
     ## TODO args to build run script here
     run_scripts = ['configuration.cfg']
+
+    with open(margs_template, 'r') as f_in, open(margs_file, 'w') as f_out:
+        text = ''.join([line for line in f_in])
+        f_out.write(text.format(
+            project_name=args.project_name,
+            clust_stride=args.clust_stride,
+            tica_stride=args.tica_stride,
+            tica_lag=args.tica_lag,
+            tica_dim=args.tica_dim,
+            msm_states=args.msm_states,
+            msm_lag=args.msm_lag))
+
     for runscript in run_scripts:
         shutil.copy('runpackage/'+runscript, run_folder+runscript)
 
@@ -41,14 +58,14 @@ if __name__ == "__main__":
             project_name=args.project_name,
             system_name=args.system_name,
             longts='--longts' if args.longts else '',
-            randomly='-R' if args.randomly else '',
             strategy=args.strategy,
             dblocation=args.dblocation,
             platform=args.platform,
+            environment=args.environment[0] if args.environment else '',
             n_rounds=args.n_rounds,
             minlength=args.minlength if args.minlength > args.length else args.length,
             n_ext=args.n_ext,
-            mk_model= '-M' if args.model else '',
+            modeller='-M {0}'.format(args.modeller) if args.modeller else '',
             n_traj=args.n_traj,
             prot=args.prot if not args.longts else args.prot * 2 / 5,
             all=args.all if not args.longts else args.all * 2 / 5,

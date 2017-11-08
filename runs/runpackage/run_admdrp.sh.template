@@ -10,23 +10,18 @@ DB_HOSTNAME={dblocation}
 
 # THIS is already in the virtualenv
 #export RP_ENABLE_OLD_DEFINES=True
-export RADICAL_PILOT_DBURL=mongodb://${{DB_HOSTNAME}}/rp
-
+#export RADICAL_PILOT_DBURL=mongodb://${{DB_HOSTNAME}}/rp
 
 # Sort out some stuff
 RUNNAME={project_name}
-
 SCRIPT_NAME={strategy}
 ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
-
 
 # Initialize the run
 python $ADMD_SCRIPT $RUNNAME {system_name} --init_only --dblocation $DB_HOSTNAME -P {platform} -p {prot} -m {all}
 
-
 # Execute the run
 which python
-python $ADMD_SCRIPT $RUNNAME {system_name} --dblocation $DB_HOSTNAME {longts} -l {length} -k {minlength} -N {n_traj} {randomly} -b {n_rounds} -x {n_ext} {mk_model} -p {prot} -m {all}
-
+python $ADMD_SCRIPT $RUNNAME {system_name} --dblocation $DB_HOSTNAME {longts} -l {length} -k {minlength} -N {n_traj} -b {n_rounds} -x {n_ext} {modeller} -p {prot} -m {all}
 
 deactivate

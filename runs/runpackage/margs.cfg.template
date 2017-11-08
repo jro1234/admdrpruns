@@ -1,0 +1,12 @@
+
+{project_name} {{
+
+  tica_stride  {tica_stride}
+  tica_lag     {tica_lag}
+  tica_dim     {tica_dim}
+
+  clust_stride {clust_stride}
+  msm_states   {msm_states}
+  msm_lag      {msm_lag}
+
+}}
