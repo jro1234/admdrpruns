@@ -16,7 +16,8 @@ SYSTEM=linux
 
 ## Paths for different installer components
 #   - modify however you like...
-PREFIX_ALL=$HOME/admdrp/
+PREFIX_ALL=$PROJWORK/bip149/$USER/admdrp/
+#PREFIX_ALL=$HOME/admdrp/
 
 # Subdirectories to make for runtime data
 # and run scripts/io
@@ -28,7 +29,7 @@ FOLDER_ADMDRP_ENV=admdrpenv/
 # CONDA is used to provide the Task environment
 #   - AdaptiveMD is not installed here
 #     in the current AdaptiveMD-RP setup
-INSTALL_CONDA=$HOME/
+INSTALL_CONDA=$PREFIX_ALL/../
 
 # VirtualEnv is used to provide the Application Environment
 #   - AdaptiveMD & RP Client, as well as RP Instance
@@ -44,7 +45,7 @@ ADAPTIVEMD_VERSION=jrossyra/adaptivemd.git
 ADAPTIVEMD_BRANCH=rp_integration
 ADAPTIVEMD_INSTALLMETHOD="--editable"
 
-CONDA_ENV_NAME=py27
+CONDA_ENV_NAME=admdtaskenv
 CONDA_ENV_PYTHON=2.7
 CONDA_VERSION=2
 CONDA_PKG_VERSION=4.3.23
