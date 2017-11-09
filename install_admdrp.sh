@@ -1,23 +1,34 @@
 #!/bin/bash
 
+# If installing on Mac, the echo'd files contain
+# an erroneous '-e'. This is used by to create
+# newlines from the "\n" string, but for some
+# reason is also getting printed to the files.
 
 module load python
 CWD=`pwd`
 
+# The only check is that the system does (not)
+# match "linux", otherwise assumes it is a Mac
+# even if you type "Linux", etc.
+SYSTEM=linux
+#SYSTEM=Mac
+
 ## Paths for different installer components
 #   - modify however you like...
-PREFIX_ALL=$PROJWORK/bip149/$USER/admdrp/
+PREFIX_ALL=$HOME/admdrp/
 
 # Subdirectories to make for runtime data
 # and run scripts/io
 FOLDER_ADMDRP_DATA=
+FOLDER_ADMDRP_DB=mongodb/
 FOLDER_ADMDRP_RUNS=
 FOLDER_ADMDRP_ENV=admdrpenv/
 
 # CONDA is used to provide the Task environment
 #   - AdaptiveMD is not installed here
 #     in the current AdaptiveMD-RP setup
-INSTALL_CONDA=$PROJWORK/bip149/$USER/
+INSTALL_CONDA=$HOME/
 
 # VirtualEnv is used to provide the Application Environment
 #   - AdaptiveMD & RP Client, as well as RP Instance
@@ -26,11 +37,12 @@ INSTALL_ENV=$PREFIX_ALL
 INSTALL_ADAPTIVEMD=$PREFIX_ALL
 INSTALL_ADMDRP_DATA=$PREFIX_ALL$FOLDER_ADMDRP_DATA
 INSTALL_ADMDRP_RUNS=$PREFIX_ALL$FOLDER_ADMDRP_RUNS
+INSTALL_ADMDRP_DB=$PREFIX_ALL
 
 ## Options & Versions:
 ADAPTIVEMD_VERSION=jrossyra/adaptivemd.git
 ADAPTIVEMD_BRANCH=rp_integration
-ADAPTIVEMD_INSTALLMETHOD="-e"
+ADAPTIVEMD_INSTALLMETHOD="--editable"
 
 CONDA_ENV_NAME=py27
 CONDA_ENV_PYTHON=2.7
@@ -42,6 +54,23 @@ NUMPY_VERSION_APP=1.12
 OPENMM_VERSION=7.0
 MONGODB_VERSION=3.3.0
 PYMONGO_VERSION=3.5
+
+# TODO something a bit better...
+if [ "$SYSTEM" == "linux" ]; then
+  echo "configuring for Linux"
+  CONDA_SYSTEM=Linux
+  MONGODB_SYSTEM=linux
+else
+  echo "configuring for Mac"
+  CONDA_SYSTEM=MacOSX
+  MONGODB_SYSTEM=osx
+  ADAPTIVEMD_INSTALLMETHOD=
+fi
+
+# TODO format conda vs virtualenv
+#      equal signs for versioning
+#
+#
 
 # Application Package dependencies
 ADMD_APP_PKG="pyyaml zmq six ujson numpy==$NUMPY_VERSION_APP"
@@ -61,27 +90,27 @@ echo "AdaptiveMD Task Stack Installer: ", $ADMD_TASK_PKG
 #  Create Root folder                                                          #
 ################################################################################
 if [ ! -d $PREFIX_ALL ]; then
-  mkdir $PREFIX_ALL
+  mkdir -p $PREFIX_ALL
 fi
 
 ################################################################################
 #  Install MongoDB                                                             #
 ################################################################################
 if [ ! -x "$(command -v mongod)" ]; then
-  cd $INSTALL_ADMD_DB
-  echo "Installing Mongo in: $INSTALL_ADMD_DB"
-  curl -O https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-$MONGODB_VERSION.tgz
-  tar -zxvf mongodb-linux-x86_64-$MONGODB_VERSION.tgz
-  mkdir mongodb
-  mv mongodb-linux-x86_64-$MONGODB_VERSION/ $FOLDER_ADMD_DB
-  mkdir -p ${FOLDER_ADMD_DB}/data/db
-  rm mongodb-linux-x86_64-$MONGODB_VERSION.tgz
+  mkdir -p $INSTALL_ADMDRP_DB
+  cd $INSTALL_ADMDRP_DB
+  echo "Installing Mongo in: $INSTALL_ADMDRP_DB"
+  curl -O https://fastdl.mongodb.org/$MONGODB_SYSTEM/mongodb-$MONGODB_SYSTEM-x86_64-$MONGODB_VERSION.tgz
+  tar -zxvf mongodb-$MONGODB_SYSTEM-x86_64-$MONGODB_VERSION.tgz
+  mv mongodb-$MONGODB_SYSTEM-x86_64-$MONGODB_VERSION/ $FOLDER_ADMDRP_DB
+  mkdir -p $INSTALL_ADMDRP_DB${FOLDER_ADMDRP_DB}data/db
+  rm mongodb-$MONGODB_SYSTEM-x86_64-$MONGODB_VERSION.tgz
   echo "# APPENDING PATH VARIABLE with AdaptiveMD Environment" >> ~/.bashrc
-  echo "export ADMD_DB=${INSTALL_ADMD_DB}${FOLDER_ADMD_DB}/" >> ~/.bashrc
-  echo "export PATH=${INSTALL_ADMD_DB}${FOLDER_ADMD_DB}/mongodb-linux-x86_64-$MONGODB_VERSION/bin/:\$PATH" >> ~/.bashrc
+  echo "export ADMDRP_DB=$INSTALL_ADMDRP_DB$FOLDER_ADMDRP_DB" >> ~/.bashrc
+  echo "export PATH=$INSTALL_ADMDRP_DB${FOLDER_ADMDRP_DB}bin:\$PATH" >> ~/.bashrc
   echo "Done installing Mongo, appended PATH with mongodb bin folder"
   # Mongo should default to using /tmp/mongo-27017.sock as socket
-  echo -e "net:\n   unixDomainSocket:\n      pathPrefix: ${INSTALL_ADMD_DB}${FOLDER_ADMD_DB}/data/\n   bindIp: 0.0.0.0" > ${INSTALL_ADMD_DB}${FOLDER_ADMD_DB}/mongo.cfg
+  echo -e "net:\n   unixDomainSocket:\n      pathPrefix: ${INSTALL_ADMDRP_DB}${FOLDER_ADMDRP_DB}data/\n   bindIp: 0.0.0.0" > ${INSTALL_ADMDRP_DB}${FOLDER_ADMDRP_DB}/mongo.cfg
   source ~/.bashrc
   echo "MongoDB daemon installed here: "
 else
@@ -93,7 +122,7 @@ which mongod
 #  Install Env                                                                 #
 ################################################################################
 if [ ! -d "$INSTALL_ENV$FOLDER_ADMDRP_ENV" ]; then
-  mkdir $INSTALL_ENV
+  mkdir -p $INSTALL_ENV
   cd $INSTALL_ENV
   virtualenv $INSTALL_ENV$FOLDER_ADMDRP_ENV
   echo "export ADMDRP_ENV=$INSTALL_ENV$FOLDER_ADMDRP_ENV" >> ~/.bashrc
@@ -113,7 +142,7 @@ fi
 ################################################################################
 source $ADMDRP_ENV_ACTIVATE
 if [ ! -d "$INSTALL_ADAPTIVEMD/adaptivemd" ]; then
-  mkdir $INSTALL_ADAPTIVEMD
+  mkdir -p $INSTALL_ADAPTIVEMD
   cd $INSTALL_ADAPTIVEMD
   git clone https://github.com/$ADAPTIVEMD_VERSION
   cd adaptivemd
@@ -133,7 +162,7 @@ deactivate
 #  Install Miniconda                                                           #
 ################################################################################
 if [ -z ${CONDAPATH+x} ]; then
-  mkdir $INSTALL_CONDA
+  mkdir -p $INSTALL_CONDA
   cd $INSTALL_CONDA
   curl -O https://repo.continuum.io/miniconda/Miniconda$CONDA_VERSION-latest-Linux-x86_64.sh
   bash Miniconda$CONDA_VERSION-latest-Linux-x86_64.sh -p ${INSTALL_CONDA}miniconda$CONDA_VERSION/
@@ -173,8 +202,8 @@ fi
 ################################################################################
 #   Copy the running scripts over and make data directory                      #
 ################################################################################
-mkdir $INSTALL_ADMDRP_DATA
-mkdir $INSTALL_ADMDRP_RUNS
+mkdir -p $INSTALL_ADMDRP_DATA
+mkdir -p $INSTALL_ADMDRP_RUNS
 cp -r $CWD/runs/ $INSTALL_ADMDRP_RUNS
 
 echo "export ADMDRP_DATA=$INSTALL_ADMDRP_DATA" >> ~/.bashrc
