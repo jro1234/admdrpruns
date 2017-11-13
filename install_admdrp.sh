@@ -56,6 +56,12 @@ OPENMM_VERSION=7.0
 MONGODB_VERSION=3.3.0
 PYMONGO_VERSION=3.5
 
+
+##################################
+#                                #
+#   End of Settings              #
+#                                #
+##################################
 # TODO something a bit better...
 if [ "$SYSTEM" == "linux" ]; then
   echo "configuring for Linux"
@@ -85,6 +91,7 @@ ADMD_TASK_PKG="numpy=$NUMPY_VERSION_TASK openmm=$OPENMM_VERSION mdtraj pyemma"
 if [[ -z "$CONDA_ENV_NAME" ]]; then
   ADMD_TASK_PKG+=" conda=$CONDA_PKG_VERSION"
 fi
+
 echo "AdaptiveMD Task Stack Installer: ", $ADMD_TASK_PKG
 
 ################################################################################
