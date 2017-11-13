@@ -190,6 +190,7 @@ if [ $INSTALL_APP = true ]; then
     pip install $ADAPTIVEMD_INSTALLMETHOD .
     python -W ignore -c "import adaptivemd" || echo "something wrong with adaptivemd install"
     echo "if no errors then AdaptiveMD & dependencies installed"
+    echo "export ADMDRP_ADAPTIVEMD=$INSTALL_ADAPTIVEMD/adaptivemd/" >> ~/.bashrc
   else
     echo "Seems AdaptiveMD is already installed, source located here:"
     echo $INSTALL_ADAPTIVEMD/adaptivemd

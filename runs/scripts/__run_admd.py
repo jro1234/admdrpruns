@@ -533,7 +533,7 @@ def init_project(p_name, sys_name, m_freq, p_freq,
 
         # only works if filestructure is preserved as described in 'jro_ntl9.ipynb'
         # and something akin to job script in 'admd_workers.pbs' is used
-        f_base = 'file:///lustre/atlas/proj-shared/bip149/jrossyra/admdrp/adaptivemd/examples/files/{0}/'.format(sys_name)
+        f_base = 'file:///$ADMDRP_ADAPTIVEMD/examples/files/{0}/'.format(sys_name)
 
         f_structure = File(f_base + f_name).load()
 
