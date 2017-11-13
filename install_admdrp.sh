@@ -41,7 +41,7 @@ INSTALL_TASKS=true
 
 ## Paths for different installer components
 #   - modify however you like...
-PREFIX_ALL=$HOME/admdrp/
+PREFIX_ALL=$PROJWORK/bip149/$USER/admdrp/
 #PREFIX_ALL=$HOME/admdrp/
 
 # Subdirectories to make for runtime data
