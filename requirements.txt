@@ -1,0 +1,15 @@
+zmq
+pyyaml
+six
+ujson
+cython==0.27.3
+numpy==1.13.3
+openmm==0.2
+pandas==0.21.0
+pyemma==2.4
+mdtraj
+git+https://github.com/choderalab/openmmtools.git@0.13.4
+git+https://github.com/radical-cybertools/radical.utils.git
+git+https://github.com/radical-cybertools/saga-python.git
+git+https://github.com/radical-cybertools/radical.pilot.git
+pymongo==3.5.1

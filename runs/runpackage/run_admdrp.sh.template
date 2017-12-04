@@ -4,7 +4,7 @@
 # Load the environment we are going to use.
 # - AdaptiveMD and RP are installed
 #   under this environment.
-source $ADMDRP_ENV/bin/activate
+source $ADMDRP_ENV_ACTIVATE
 
 DB_HOSTNAME={dblocation}
 
@@ -22,6 +22,6 @@ python $ADMD_SCRIPT $RUNNAME {system_name} --init_only --dblocation $DB_HOSTNAME
 
 # Execute the run
 which python
-python $ADMD_SCRIPT $RUNNAME {system_name} --dblocation $DB_HOSTNAME {longts} -l {length} -k {minlength} -N {n_traj} -b {n_rounds} -x {n_ext} {modeller} -p {prot} -m {all}
+python $ADMD_SCRIPT $RUNNAME {system_name} --dblocation $DB_HOSTNAME {environment} {activate_prefix} {virtualenv} {longts} -l {length} -k {minlength} -N {n_traj} -b {n_rounds} -x {n_ext} {modeller} -p {prot} -m {all}
 
 deactivate

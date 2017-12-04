@@ -41,12 +41,14 @@ def argparser():
         help="Number of task rounds inside a single PBS job",
         type=int, default=0)
 
-    parser.add_argument("-e","--environment", nargs='*',
-        help="Environment for running tasks")
+    parser.add_argument("-e","--environment",
+        help="Conda Environment for running tasks")
+
+    parser.add_argument("-w","--virtualenv",
+        help="Virtualenv environment for running tasks")
 
     parser.add_argument("-A","--activate_prefix",
-        help="Prefix for activate script",
-        type=str, default="$CONDAPATH")
+        help="Prefix for activate script")
 
     parser.add_argument("-k","--minlength",
         help="Minimum trajectory total length in frames",

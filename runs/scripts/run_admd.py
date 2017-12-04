@@ -26,6 +26,8 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
        and cpus per node. Need to decide how these will be
        calculated and managed in general.
 
+    Parameters
+    ----------
     n_workload : <int>
     For now, this is like the number of nodes that will be used.
     With OpenMM Simulations and the 1-node PyEMMA tasks, this is
@@ -45,8 +47,9 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
     estimate to ensure jobs don't timeout before the tasks
     are completed.
     '''
-
-    cpus = n_workload * 16
+    #cpu_per_node = 16
+    #cpus = n_workload * cpu_per_node
+    nodes = n_workload
     gpus = n_workload
     print("n_steps: ", n_steps, "\nn_rounds: ", n_rounds, "\nsteprate: ", steprate)
 
@@ -54,7 +57,7 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
     # as the minimum walltime
     wallminutes = 5 + int(n_steps * n_rounds / steprate)
 
-    return cpus, wallminutes, gpus 
+    return nodes, wallminutes, gpus 
 
 
 if __name__ == '__main__':
@@ -118,7 +121,9 @@ if __name__ == '__main__':
             fixedlength=True,#args.fixedlength,
             minlength=args.minlength,
             n_rounds=args.n_rounds,
-            environment=args.environment[0] if args.environment else args.environment,
+            environment=args.environment,
+            activate_prefix=args.activate_prefix,
+            virtualenv=args.virtualenv,
             longest=args.all))
 
         print("Triggering project")

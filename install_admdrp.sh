@@ -19,7 +19,7 @@
 # who has python < 2.7.x) you will need
 # to do something like this due to syntax
 # changes.
-#module load python
+module load python
 
 CWD=`pwd`
 
@@ -30,7 +30,8 @@ SYSTEM=linux
 #SYSTEM=Mac
 
 # TODO see when this is necessary...
-RP_ENV_PRELOAD=false
+RP_ENV_PRELOAD=true
+#RP_ENV_PRELOAD=false
 
 # Use these to change what layers are installed
 # if the DB is already installed then nothing
@@ -41,7 +42,7 @@ INSTALL_TASKS=true
 
 ## Paths for different installer components
 #   - modify however you like...
-PREFIX_ALL=$HOME/admdrp/
+PREFIX_ALL=$PROJWORK/bip149/$USER/admdrp/
 #PREFIX_ALL=$HOME/admdrp/
 
 # Subdirectories to make for runtime data
@@ -259,5 +260,5 @@ fi
 ################################################################################
 cd $CWD
 
-#module unload python/2.7.9
+module unload python/2.7.9
 
