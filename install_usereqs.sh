@@ -43,6 +43,8 @@ then
   cd $FOLDER_ADMDRP
   mkdir runs/
   cp -rp $CWD/runs/* runs/
+else
+  cd $FOLDER_ADMDRP
 fi
 
 git clone https://github.com/$ADAPTIVEMD_PKG
