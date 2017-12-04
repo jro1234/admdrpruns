@@ -37,9 +37,13 @@ source $ADMDRP_ENV_ACTIVATE
 cat requirements.txt | xargs -n 1 -L 1 pip install
 
 cd $INSTALL_HOME
-mkdir $FOLDER_ADMDRP
-cd $FOLDER_ADMDRP
-mkdir runs/
+if [ ! -d "$FOLDER_ADMDRP" ]
+then
+  mkdir $FOLDER_ADMDRP
+  cd $FOLDER_ADMDRP
+  mkdir runs/
+  cp -rp $CWD/runs/* runs/
+fi
 
 git clone https://github.com/$ADAPTIVEMD_PKG
 cd adaptivemd
