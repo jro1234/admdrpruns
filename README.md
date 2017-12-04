@@ -28,8 +28,9 @@ Usage:
 
   $ python runmaker.py testagain ntl9 -e py27 -A $CONDAPATH -P CUDA -M pyemma-ionic -N 10 -x 1 -b 1 -l 10000 -p 500 -m 1000
 
+
  With virtualenv containing coinstallation of AdaptiveMD application and task environments, and Radical Pilot.
   - the "-w" option gives the full file location of the virtualenv activate script
 
-  $ python runmaker.py testagain ntl9 -w $ADMDRP_ENV_ACTIVATE -P CUDA -M pyemma-ionic -N 10 -x 1 -b 1 -l 10000 -p 500 -m 1000
+  $ python runmaker.py test01 ntl9 -w $ADMDRP_ENV_ACTIVATE -P CUDA -M pyemma-ionic -N 10 -x 1 -b 1 -l 10000 -p 500 -m 1000
 

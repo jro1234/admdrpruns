@@ -47,8 +47,9 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
     estimate to ensure jobs don't timeout before the tasks
     are completed.
     '''
-    #cpu_per_node = 16
-    #cpus = n_workload * cpu_per_node
+    # TODO get this from the configuration and send to function
+    cpu_per_node = 16
+    cpus = n_workload * cpu_per_node
     nodes = n_workload
     gpus = n_workload
     print("n_steps: ", n_steps, "\nn_rounds: ", n_rounds, "\nsteprate: ", steprate)
@@ -57,7 +58,7 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
     # as the minimum walltime
     wallminutes = 5 + int(n_steps * n_rounds / steprate)
 
-    return nodes, wallminutes, gpus 
+    return cpus, nodes, wallminutes, gpus 
 
 
 if __name__ == '__main__':
@@ -97,7 +98,7 @@ if __name__ == '__main__':
 
         print("dburl: ", project.storage._db_url)
 
-        cpus, walltime, gpus = calculate_request(
+        cpus, nodes, walltime, gpus = calculate_request(
                                       args.n_traj+1,
                                       args.n_rounds,
                                       args.length)#, steprate)
