@@ -11,5 +11,5 @@ mdtraj
 git+https://github.com/choderalab/openmmtools.git@0.13.4
 git+https://github.com/radical-cybertools/radical.utils.git
 git+https://github.com/radical-cybertools/saga-python.git
-git+https://github.com/radical-cybertools/radical.pilot.git
+git+https://github.com/radical-cybertools/radical.pilot.git@/fix/issue_1511
 pymongo==3.5.1
