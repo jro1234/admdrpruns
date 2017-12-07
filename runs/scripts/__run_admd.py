@@ -88,6 +88,7 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
     if environment:
         [ta.add_conda_env(environment, activate_prefix) for ta in tasks]
     if virtualenv:
+        [ta.pre.append('module load python') for ta in tasks]
         [ta.add_virtualenv(virtualenv) for ta in tasks]
 
     return tasks
@@ -107,6 +108,7 @@ def model_task(project, modeller, margs, trajectories=None,
     if environment:
         mtask.add_conda_env(environment, activate_prefix)
     if virtualenv:
+        mtask.pre.append('module load python')
         mtask.add_virtualenv(virtualenv)
 
     project.queue(mtask)
@@ -169,6 +171,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         if environment:
             [ta.add_conda_env(environment, activate_prefix) for ta in tasks]
         if virtualenv:
+            [ta.pre.append('module load python') for ta in tasks]
             [ta.add_virtualenv(virtualenv) for ta in tasks]
 
         if not n_rounds or not c.done:
@@ -223,6 +226,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     if environment:
                         [ta.add_conda_env(environment, activate_prefix) for ta in tasks]
                     if virtualenv:
+                        [ta.pre.append('module load python') for ta in tasks]
                         [ta.add_virtualenv(virtualenv) for ta in tasks]
 
                     for task in tasks:
@@ -283,6 +287,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                      for ta in tasks]
 
                 if virtualenv:
+                    [ta.pre.append('module load python') for ta in tasks]
                     [ta.add_virtualenv(virtualenv)
                      for ta in tasks]
 
@@ -311,6 +316,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                          for ta in tasks]
 
                     if virtualenv:
+                        [ta.pre.append('module load python') for ta in tasks]
                         [ta.add_virtualenv(virtualenv)
                          for ta in tasks]
                     project.queue(tasks)
