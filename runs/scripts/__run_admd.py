@@ -58,6 +58,18 @@ def randlength(n, incr, length, lengthvariance=0.2):
             for r in rand]
 
 
+def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None):
+    if isinstance(task, list):
+        return [add_task_env(ta, environment, activate_prefix, virtualenv) for ta in task]
+    else:
+        if environment:
+            task.add_conda_env(environment, activate_prefix)
+        if virtualenv:
+            task.pre.append('module load python')
+            task.add_virtualenv(virtualenv)
+        return task
+
+
 def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None, environment=None, activate_prefix=None, virtualenv=None):
 
     if not trajectories:
@@ -85,11 +97,7 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
     if n_run is not None and len(tasks) > n_run:
         tasks = tasks[:n_run]
 
-    if environment:
-        [ta.add_conda_env(environment, activate_prefix) for ta in tasks]
-    if virtualenv:
-        [ta.pre.append('module load python') for ta in tasks]
-        [ta.add_virtualenv(virtualenv) for ta in tasks]
+    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
 
     return tasks
 
@@ -105,11 +113,7 @@ def model_task(project, modeller, margs, trajectories=None,
         trajectories = project.trajectories
 
     mtask = modeller.execute(list(trajectories), **margs)
-    if environment:
-        mtask.add_conda_env(environment, activate_prefix)
-    if virtualenv:
-        mtask.pre.append('module load python')
-        mtask.add_virtualenv(virtualenv)
+    mtask = add_task_env(mtask, environment, activate_prefix, virtualenv)
 
     project.queue(mtask)
 
@@ -168,11 +172,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
          engine['pdb_file'], rb, engine).run())
          for rb in randbreak]
 
-        if environment:
-            [ta.add_conda_env(environment, activate_prefix) for ta in tasks]
-        if virtualenv:
-            [ta.pre.append('module load python') for ta in tasks]
-            [ta.add_virtualenv(virtualenv) for ta in tasks]
+        tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
 
         if not n_rounds or not c.done:
             project.queue(tasks)
@@ -223,11 +223,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 if not n_rounds or not c.done:
                     #[tasks.append(t.run(export_path=export_path)) for t in trajectories]
                     [tasks.append(t.run()) for t in trajectories]
-                    if environment:
-                        [ta.add_conda_env(environment, activate_prefix) for ta in tasks]
-                    if virtualenv:
-                        [ta.pre.append('module load python') for ta in tasks]
-                        [ta.add_virtualenv(virtualenv) for ta in tasks]
+                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
 
                     for task in tasks:
                         project.queue(task)
@@ -282,14 +278,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
                 #print(trajectories)
                 [tasks.append(t.run()) for t in trajectories]
-                if environment:
-                    [ta.add_conda_env(environment, activate_prefix)
-                     for ta in tasks]
-
-                if virtualenv:
-                    [ta.pre.append('module load python') for ta in tasks]
-                    [ta.add_virtualenv(virtualenv)
-                     for ta in tasks]
+                tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
 
                 if not n_rounds or not c.done:
                     c.increment()
@@ -311,14 +300,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 if not n_rounds or not c.done:
                     c.increment()
                     [tasks.append(t.run()) for t in trajectories]
-                    if environment:
-                        [ta.add_conda_env(environment, activate_prefix)
-                         for ta in tasks]
-
-                    if virtualenv:
-                        [ta.pre.append('module load python') for ta in tasks]
-                        [ta.add_virtualenv(virtualenv)
-                         for ta in tasks]
+                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
                     project.queue(tasks)
 
                 if mtask.is_done():
