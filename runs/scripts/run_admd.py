@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
         project.request_resource(cpus, walltime, gpus, 'current')
 
-        client = Client(project.storage._db_url+'/', project.name)
+        client = Client(project.storage._db_url, project.name)
         client.start()
 
         start_time = time.time()
