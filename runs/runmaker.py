@@ -69,6 +69,7 @@ if __name__ == "__main__":
             n_ext=args.n_ext,
             modeller='-M {0}'.format(args.modeller) if args.modeller else '',
             n_traj=args.n_traj,
+            threads=args.threads,
             prot=args.prot if not args.longts else args.prot * 2 / 5,
             all=args.all if not args.longts else args.all * 2 / 5,
             length=args.length,))

@@ -53,11 +53,9 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
     nodes = n_workload
     gpus = n_workload
     print("n_steps: ", n_steps, "\nn_rounds: ", n_rounds, "\nsteprate: ", steprate)
-
     # 5 minutes padding for initialization & such
     # as the minimum walltime
-    wallminutes = 5 + int(n_steps * n_rounds / steprate)
-
+    wallminutes = 10 + int(float(n_steps) * n_rounds / steprate)
     return cpus, nodes, wallminutes, gpus 
 
 
@@ -125,7 +123,9 @@ if __name__ == '__main__':
             environment=args.environment,
             activate_prefix=args.activate_prefix,
             virtualenv=args.virtualenv,
-            longest=args.all))
+            longest=args.all,
+            cpu_threads=args.threads,
+            ))
 
         print("Triggering project")
         project.wait_until(project.events_done)
@@ -133,6 +133,8 @@ if __name__ == '__main__':
         end_time = time.time()
         print("Start Time: {0}\nEnd Time: {1}"
               .format(start_time, end_time))
+
+        client.stop()
 
     print("Exiting Event Script")
     project.close()

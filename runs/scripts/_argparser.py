@@ -41,6 +41,10 @@ def argparser():
         help="Number of task rounds inside a single PBS job",
         type=int, default=0)
 
+    parser.add_argument("-t","--threads",
+        help="Number of threads per task",
+        type=int, default=1)
+
     parser.add_argument("-e","--environment",
         help="Conda Environment for running tasks")
 

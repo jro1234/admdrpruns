@@ -58,19 +58,22 @@ def randlength(n, incr, length, lengthvariance=0.2):
             for r in rand]
 
 
-def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None):
+def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, openmm_threads=None):
     if isinstance(task, list):
-        return [add_task_env(ta, environment, activate_prefix, virtualenv) for ta in task]
+        return [add_task_env(ta, environment, activate_prefix, virtualenv, openmm_threads) for ta in task]
     else:
         if environment:
             task.add_conda_env(environment, activate_prefix)
         if virtualenv:
             task.pre.append('module load python')
             task.add_virtualenv(virtualenv)
+        if openmm_threads:
+            if len(openmm_threads)==1:
+                task.setenv(*openmm_threads.items()[0])
         return task
 
 
-def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None, environment=None, activate_prefix=None, virtualenv=None):
+def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None, environment=None, activate_prefix=None, virtualenv=None, openmm_threads=None):
 
     if not trajectories:
         trajectories = project.trajectories
@@ -97,14 +100,15 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
     if n_run is not None and len(tasks) > n_run:
         tasks = tasks[:n_run]
 
-    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
+    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
     return tasks
 
 
 def model_task(project, modeller, margs, trajectories=None,
                environment=None, activate_prefix=None,
-               virtualenv=None):
+               virtualenv=None, resource_name=None, cpu_threads=1,
+               gpu_contexts=0, mpi_rank=0):
 
     # model task goes last to ensure (on first one) that the
     # previous round of trajectories is done
@@ -112,7 +116,9 @@ def model_task(project, modeller, margs, trajectories=None,
     if trajectories is None:
         trajectories = project.trajectories
 
-    mtask = modeller.execute(list(trajectories), **margs)
+    mtask = modeller.execute(list(trajectories), resource_name, 
+                cpu_threads, gpu_contexts, mpi_rank,**margs)
+
     mtask = add_task_env(mtask, environment, activate_prefix, virtualenv)
 
     project.queue(mtask)
@@ -124,14 +130,25 @@ def model_task(project, modeller, margs, trajectories=None,
 
 
 
+# TODO snowball all environment stuff AND resource requirements
+#      into variable "taskenv", which gets sent as kwargs to the
+#      add_task_env function for application to tasks
+#       - maybe not, resolve this considering late-binding of
+#         of task env attributes and traj.run(**res_reqs)
 def strategy_function(project, engine, n_run, n_ext, n_steps,
                    modellers=None, fixedlength=True, longest=5000,
                    continuing=True, minlength=None, randomly=False,
                    n_rounds=0, environment=None,
-                   activate_prefix=None, virtualenv=None, **kwargs):
-                   #export_path='export PATH="$CONDAPATH:$PATH"'
-                   #environment='py27'
-                   #activate_prefix='$CONDAPATH'
+                   activate_prefix=None, virtualenv=None,
+                   cpu_threads=16, gpu_contexts=1, mpi_rank=0,
+                   **kwargs):
+
+    openmm_threads = {'OPENMM_CPU_THREADS': cpu_threads}
+    resource_name = project._current_configuration.resource_name
+    resource_requirements = {'resource_name': resource_name,
+                             'cpu_threads': cpu_threads,
+                             'gpu_contexts': gpu_contexts,
+                             'mpi_rank': mpi_rank}
 
     c = counter(n_rounds)
 
@@ -169,10 +186,10 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         tasks = list()
 
         [tasks.append(project.new_trajectory(
-         engine['pdb_file'], rb, engine).run())
+         engine['pdb_file'], rb, engine).run(**resource_requirements))
          for rb in randbreak]
 
-        tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
+        tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
         if not n_rounds or not c.done:
             project.queue(tasks)
@@ -222,8 +239,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 #print(trajectories)
                 if not n_rounds or not c.done:
                     #[tasks.append(t.run(export_path=export_path)) for t in trajectories]
-                    [tasks.append(t.run()) for t in trajectories]
-                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
+                    [tasks.append(t.run(**resource_requirements)) for t in trajectories]
+                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
                     for task in tasks:
                         project.queue(task)
@@ -242,7 +259,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                         mtask = model_task(project, modeller, margs,
                             environment=environment,
                             activate_prefix=activate_prefix,
-                            virtualenv=virtualenv)
+                            virtualenv=virtualenv,
+                            **resource_requirements)
 
                         tasks.append(mtask)
                         waiting = False
@@ -263,7 +281,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     mtask = model_task(project, modeller, margs,
                             environment=environment,
                             activate_prefix=activate_prefix,
-                            virtualenv=virtualenv)
+                            virtualenv=virtualenv,
+                            **resource_requirements)
 
                     tasks.append(mtask)
                     
@@ -277,8 +296,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 trajectories = project.new_ml_trajectory(engine, unrandbreak, n_run, randomly)
 
                 #print(trajectories)
-                [tasks.append(t.run()) for t in trajectories]
-                tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
+                [tasks.append(t.run(**resource_requirements)) for t in trajectories]
+                tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
                 if not n_rounds or not c.done:
                     c.increment()
@@ -299,15 +318,16 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
                 if not n_rounds or not c.done:
                     c.increment()
-                    [tasks.append(t.run()) for t in trajectories]
-                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv)
+                    [tasks.append(t.run(**resource_requirements)) for t in trajectories]
+                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
                     project.queue(tasks)
 
                 if mtask.is_done():
                     mtask = model_task(project, modeller, margs,
                             environment=environment,
                             activate_prefix=activate_prefix,
-                            virtualenv=virtualenv)
+                            virtualenv=virtualenv,
+                            **resource_requirements)
 
                     tasks.append(mtask)
 
@@ -382,7 +402,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
             else:
                 xtasks = check_trajectory_minlength(project, minlength,
                     n_steps, n_run, environment=environment,
-                    activate_prefix=activate_prefix, virtualenv=virtualenv)
+                    activate_prefix=activate_prefix, virtualenv=virtualenv,
+                    openmm_threads=openmm_threads)
 
             tnames = set()
             if len(trajectories) > 0:
@@ -586,12 +607,6 @@ def init_project(p_name, sys_name, m_freq, p_freq,
         f_integrator_5 = File(f_base + 'integrator-5.xml').load()
 
         sim_args = '-r -p {0}'.format(platform)
-
-        if platform == 'CPU':
-            print("Using CPU simulation platform with {0} threads per worker"
-                  .format(w_threads))
-
-            sim_args += ' --cpu-cpu-threads {0}'.format(w_threads)
 
         engine_2 = OpenMMEngine(f_system_2, f_integrator_2,
                               f_structure, sim_args).named('openmm-2')
