@@ -4,6 +4,7 @@
 # Load the environment we are going to use.
 # - AdaptiveMD and RP are installed
 #   under this environment.
+module load python
 source $ADMDRP_ENV_ACTIVATE
 
 DB_HOSTNAME={dblocation}

@@ -17,7 +17,7 @@ import time
 
 
 
-def calculate_request(n_workload, n_rounds, n_steps, steprate=1000):
+def calculate_request(n_workload, n_rounds, n_steps, steprate=50):
     '''
     Calculate the parameters for resource request done by RP.
     The workload to execute will be assessed to estimate these

@@ -60,7 +60,7 @@ def randlength(n, incr, length, lengthvariance=0.2):
 
 def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, openmm_threads=None):
     if isinstance(task, list):
-        return [add_task_env(ta, environment, activate_prefix, virtualenv, openmm_threads) for ta in task]
+        [add_task_env(ta, environment, activate_prefix, virtualenv, openmm_threads) for ta in task]
     else:
         if environment:
             task.add_conda_env(environment, activate_prefix)
@@ -70,7 +70,6 @@ def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, 
         if openmm_threads:
             if len(openmm_threads)==1:
                 task.setenv(*openmm_threads.items()[0])
-        return task
 
 
 def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None, environment=None, activate_prefix=None, virtualenv=None, openmm_threads=None):
@@ -100,15 +99,13 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
     if n_run is not None and len(tasks) > n_run:
         tasks = tasks[:n_run]
 
-    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
+    add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
     return tasks
 
 
 def model_task(project, modeller, margs, trajectories=None,
-               environment=None, activate_prefix=None,
-               virtualenv=None, resource_name=None, cpu_threads=1,
-               gpu_contexts=0, mpi_rank=0):
+               resource_requirements=None, taskenv=None):
 
     # model task goes last to ensure (on first one) that the
     # previous round of trajectories is done
@@ -116,10 +113,13 @@ def model_task(project, modeller, margs, trajectories=None,
     if trajectories is None:
         trajectories = project.trajectories
 
-    mtask = modeller.execute(list(trajectories), resource_name, 
-                cpu_threads, gpu_contexts, mpi_rank,**margs)
+    print(project, modeller, margs, trajectories, resource_requirements)
 
-    mtask = add_task_env(mtask, environment, activate_prefix, virtualenv)
+    kwargs = margs.copy()
+    kwargs.update(resource_requirements)
+    mtask = modeller.execute(list(trajectories), **kwargs)
+
+    add_task_env(mtask, **taskenv)
 
     project.queue(mtask)
 
@@ -135,22 +135,31 @@ def model_task(project, modeller, margs, trajectories=None,
 #      add_task_env function for application to tasks
 #       - maybe not, resolve this considering late-binding of
 #         of task env attributes and traj.run(**res_reqs)
+#
+#       --> not using resource_requirements in task env
+#
 def strategy_function(project, engine, n_run, n_ext, n_steps,
-                   modellers=None, fixedlength=True, longest=5000,
+                   modeller=None, fixedlength=True, longest=5000,
                    continuing=True, minlength=None, randomly=False,
                    n_rounds=0, environment=None,
                    activate_prefix=None, virtualenv=None,
                    cpu_threads=16, gpu_contexts=1, mpi_rank=0,
                    **kwargs):
 
+    taskenv = {'environment': environment,
+               'activate_prefix': activate_prefix,
+               'virtualenv': virtualenv}
+
     openmm_threads = {'OPENMM_CPU_THREADS': cpu_threads}
     resource_name = project._current_configuration.resource_name
+
     resource_requirements = {'resource_name': resource_name,
                              'cpu_threads': cpu_threads,
                              'gpu_contexts': gpu_contexts,
                              'mpi_rank': mpi_rank}
 
     c = counter(n_rounds)
+    tasks = list()
 
     if n_rounds:
         assert(n_rounds > 0)
@@ -183,13 +192,12 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
     if len(project.trajectories) == 0:
 
         notfirsttime = False
-        tasks = list()
 
         [tasks.append(project.new_trajectory(
          engine['pdb_file'], rb, engine).run(**resource_requirements))
          for rb in randbreak]
 
-        tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
+        add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
         if not n_rounds or not c.done:
             project.queue(tasks)
@@ -230,7 +238,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 # this will randomly sample the existing
                 # trajectories for starting frames
                 # if no pre-existing data
-                trajectories = project.new_ml_trajectory(engine, lengtharg, n_run, randomly)
+                trajectories = [project.new_trajectory(engine['pdb_file'], lengtharg, engine) for _ in range(n_run)]
+                #trajectories = project.new_ml_trajectory(engine, lengtharg, n_run, randomly)
 
                 # could use the initial PDB for next round
                 #trajectories = project.new_trajectory(engine['pdb_file'],
@@ -240,7 +249,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 if not n_rounds or not c.done:
                     #[tasks.append(t.run(export_path=export_path)) for t in trajectories]
                     [tasks.append(t.run(**resource_requirements)) for t in trajectories]
-                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
+                    add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
                     for task in tasks:
                         project.queue(task)
@@ -257,10 +266,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     if notfirsttime or len(project.trajectories) >= n_run:
                         print("adding first/next modeller task")
                         mtask = model_task(project, modeller, margs,
-                            environment=environment,
-                            activate_prefix=activate_prefix,
-                            virtualenv=virtualenv,
-                            **resource_requirements)
+                            taskenv=taskenv,
+                            resource_requirements=resource_requirements)
 
                         tasks.append(mtask)
                         waiting = False
@@ -279,10 +286,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 # after last round, only task.done
                 if continuing:
                     mtask = model_task(project, modeller, margs,
-                            environment=environment,
-                            activate_prefix=activate_prefix,
-                            virtualenv=virtualenv,
-                            **resource_requirements)
+                            taskenv=taskenv,
+                            resource_requirements=resource_requirements)
 
                     tasks.append(mtask)
                     
@@ -293,11 +298,12 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 unrandbreak.reverse()
                 print("Unrandbreak: \n", unrandbreak)
 
-                trajectories = project.new_ml_trajectory(engine, unrandbreak, n_run, randomly)
+                #trajectories = project.new_ml_trajectory(engine, unrandbreak, n_run, randomly)
+                trajectories = [project.new_trajectory(engine['pdb_file'], unrandbreak, engine) for _ in range(n_run)]
 
                 #print(trajectories)
                 [tasks.append(t.run(**resource_requirements)) for t in trajectories]
-                tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
+                add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
 
                 if not n_rounds or not c.done:
                     c.increment()
@@ -314,20 +320,19 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
             #    with mtask
             if len(tasks) == 0:
                 print("Queueing new round of modelled trajectories")
-                trajectories = project.new_ml_trajectory(engine, n_steps, n_run, randomly)
+                #trajectories = project.new_ml_trajectory(engine, n_steps, n_run, randomly)
+                trajectories = [project.new_trajectory(engine['pdb_file'], n_steps, engine) for _ in range(n_run)]
 
                 if not n_rounds or not c.done:
                     c.increment()
                     [tasks.append(t.run(**resource_requirements)) for t in trajectories]
-                    tasks = add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
+                    add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
                     project.queue(tasks)
 
                 if mtask.is_done():
                     mtask = model_task(project, modeller, margs,
-                            environment=environment,
-                            activate_prefix=activate_prefix,
-                            virtualenv=virtualenv,
-                            **resource_requirements)
+                            taskenv=taskenv,
+                            resource_requirements=resource_requirements)
 
                     tasks.append(mtask)
 
@@ -450,12 +455,6 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
         print("\n----------- Extension #{0}".format(c_ext))
 
-        # super-strategic logic here!
-        if c_ext > n_ext/2:
-            modeller = modellers[1]
-        else:
-            modeller = modellers[0]
-
         # when c_ext == n_ext, we just wanted
         # to use check_trajectory_minlength above
         if c_ext < n_ext and not c.done:
@@ -517,34 +516,19 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
     # the workers to be idling...
     def all_done():
         '''
-        This function scavenges project for idle workers.
-        They are shut down if idle to flush the output.
-        Returns function that returns True when all workers
-        have been shut down.
+        Need to make sure all tasks are in a final state, ie
+        either cancelled or success.
         '''         
         #print("Checking if all done")
         idle_time = 20
-        for w in project.workers:
-            if w.state not in {'down','dead'}:
-                try:
-                    idx = list(zip(*workers))[0].index(w)
-                    if not w.n_tasks:
-                        if time.time() - workers[idx][1] > idle_time:
-                            w.execute('shutdown')
-                    else:
-                        workers.pop(idx)
-
-                except (ValueError, IndexError):
-                    if not w.n_tasks:
-                        workers.append((w, time.time()))
-
-        #print([w.state for w,t in workers])
-        return all([ w.state in {'down','dead'}
-                     for w in project.workers
-                  ])
+        for ta in project.tasks:
+            if ta.state not in {'cancelled', 'success'}:
+                time.sleep(idle_time)
+                return False
+        else:
+            return True
 
     print("Waiting for all done")
-    workers = list()
     yield lambda: all_done()
     time.sleep(5)
 
