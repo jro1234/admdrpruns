@@ -56,7 +56,7 @@ def argparser():
 
     parser.add_argument("-k","--minlength",
         help="Minimum trajectory total length in frames",
-        type=int, default=300)
+        type=int, default=100)
 
     parser.add_argument("-f","--fixedlength",
         help="Default randomizes traj length, flag to fix to n_steps",
@@ -64,11 +64,11 @@ def argparser():
 
     parser.add_argument("-p","--protein-stride", dest="prot",
         help="Stride between saved protein structure frames",
-        type=int, default=5)
+        type=int, default=2)
 
     parser.add_argument("-m","--master-stride", dest="all",
         help="Stride between saved frames with all atoms",
-        type=int, default=20)
+        type=int, default=10)
 
     parser.add_argument("-P","--platform",
         help="Simulation Platform: Reference, CPU, CUDA, or OpenCL",
@@ -92,7 +92,7 @@ def argparser():
 
     parser.add_argument("--tica_lag",
         help="TICA lag in frames",
-        type=int, default=25)
+        type=int, default=20)
 
     parser.add_argument("--tica_dim",
         help="Number of TICA dimensions for clustering",
@@ -100,18 +100,18 @@ def argparser():
 
     parser.add_argument("--tica_stride",
         help="TICA stride in frames",
-        type=int, default=5)
+        type=int, default=1)
 
     parser.add_argument("--clust_stride",
         help="Clustering stride in frames",
-        type=int, default=5)
+        type=int, default=1)
 
     parser.add_argument("--msm_lag",
         help="MSM lag in frames",
-        type=int, default=25)
+        type=int, default=20)
 
     parser.add_argument("--msm_states",
         help="MISLEADING name, number of microstates for clustering",
-        type=int, default=50)
+        type=int, default=25)
 
     return parser

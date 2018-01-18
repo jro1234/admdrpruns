@@ -28,7 +28,6 @@ then
   echo "export ADMDRP_RUNS=$INSTALL_HOME${FOLDER_ADMDRP}runs/" >> ~/.bashrc
   echo "export ADMDRP_ADAPTIVEMD=$INSTALL_HOME${FOLDER_ADMDRP}adaptivemd/" >> ~/.bashrc
   echo "export ADMDRP_DATA=$INSTALL_HOME$FOLDER_ADMDRP" >> ~/.bashrc
-  echo "export ADMDRP_RUNS=$INSTALL_HOME${FOLDER_ADMDRP}runs/" >> ~/.bashrc
 fi
 
 source ~/.bashrc

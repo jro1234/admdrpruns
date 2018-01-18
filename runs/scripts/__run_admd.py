@@ -72,7 +72,8 @@ def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, 
                 task.setenv(*openmm_threads.items()[0])
 
 
-def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None, environment=None, activate_prefix=None, virtualenv=None, openmm_threads=None):
+def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None,
+                               environment=None, activate_prefix=None, virtualenv=None, openmm_threads=None):
 
     if not trajectories:
         trajectories = project.trajectories
@@ -117,6 +118,7 @@ def model_task(project, modeller, margs, trajectories=None,
 
     kwargs = margs.copy()
     kwargs.update(resource_requirements)
+    kwargs.update({"est_exec_time": 7})
     mtask = modeller.execute(list(trajectories), **kwargs)
 
     add_task_env(mtask, **taskenv)
@@ -150,6 +152,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                'activate_prefix': activate_prefix,
                'virtualenv': virtualenv}
 
+    print("Got {0} for `cpu_threads`".format(cpu_threads))
     openmm_threads = {'OPENMM_CPU_THREADS': cpu_threads}
     resource_name = project._current_configuration.resource_name
 
@@ -219,7 +222,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
     print("Starting Trajectory Extensions")
 
     def model_extend(modeller, randbreak, mtask=None, c=None):
-        #print("c_ext is ", c_ext, "({0})".format(n_ext))
+        print("c_ext is ", c_ext, "({0})".format(n_ext))
         #print("length of extended is: ", len(extended))
 
         # FIRST workload including a model this execution
@@ -263,6 +266,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     # OK condition because we're in first
                     #    extension, as long as its a fresh
                     #    project.
+                    print("len(project.trajectories), n_run",
+                          len(project.trajectories), n_run)
                     if notfirsttime or len(project.trajectories) >= n_run:
                         print("adding first/next modeller task")
                         mtask = model_task(project, modeller, margs,
@@ -521,8 +526,13 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         '''         
         #print("Checking if all done")
         idle_time = 20
-        for ta in project.tasks:
-            if ta.state not in {'cancelled', 'success'}:
+        #for ta in project.tasks:
+        for ta in project.storage.tasks._document.find():
+            #print(ta.state)
+            #if ta.state not in {'cancelled', 'success'}:
+            print(ta['state'])
+            print(ta['_dict']['state'])
+            if ta['_dict']['state'] not in {'dummy','cancelled', 'success'}:
                 time.sleep(idle_time)
                 return False
         else:

@@ -9,5 +9,5 @@ pyemma==2.4
 mdtraj
 git+https://github.com/radical-cybertools/radical.utils.git
 git+https://github.com/radical-cybertools/saga-python.git
-git+https://github.com/radical-cybertools/radical.pilot.git
+git+https://github.com/radical-cybertools/radical.pilot.git@fix/ompi_on_titan
 pymongo==3.5.1

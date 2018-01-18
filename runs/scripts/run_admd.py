@@ -17,7 +17,7 @@ import time
 
 
 
-def calculate_request(n_workload, n_rounds, n_steps, steprate=50):
+def calculate_request(size_workload, n_workloads, n_steps, steprate=50):
     '''
     Calculate the parameters for resource request done by RP.
     The workload to execute will be assessed to estimate these
@@ -28,12 +28,12 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=50):
 
     Parameters
     ----------
-    n_workload : <int>
+    size_workload : <int>
     For now, this is like the number of nodes that will be used.
     With OpenMM Simulations and the 1-node PyEMMA tasks, this is
     also the number of tasks per workload. Clearly a name conflict...
 
-    n_rounds : <int>
+    n_workloads : <int>
     Number of workload iterations or rounds. The model here
     is that the workloads are approximately identical, maybe
     some will not include new modeller tasks but otherwise
@@ -48,14 +48,16 @@ def calculate_request(n_workload, n_rounds, n_steps, steprate=50):
     are completed.
     '''
     # TODO get this from the configuration and send to function
+    rp_cpu_overhead = 16
     cpu_per_node = 16
-    cpus = n_workload * cpu_per_node
-    nodes = n_workload
-    gpus = n_workload
-    print("n_steps: ", n_steps, "\nn_rounds: ", n_rounds, "\nsteprate: ", steprate)
+    cpus = size_workload * cpu_per_node + rp_cpu_overhead
+    # nodes is not used
+    nodes = size_workload 
+    gpus = size_workload
+    print("n_steps: ", n_steps, "\nn_workloads: ", n_workloads, "\nsteprate: ", steprate)
     # 5 minutes padding for initialization & such
     # as the minimum walltime
-    wallminutes = 10 + int(float(n_steps) * n_rounds / steprate)
+    wallminutes = 10 + int(float(n_steps) * n_workloads / steprate)
     return cpus, nodes, wallminutes, gpus 
 
 
@@ -119,7 +121,7 @@ if __name__ == '__main__':
             modeller=modeller,
             fixedlength=True,#args.fixedlength,
             minlength=args.minlength,
-            n_rounds=args.n_rounds,
+            n_workloads=args.n_rounds,
             environment=args.environment,
             activate_prefix=args.activate_prefix,
             virtualenv=args.virtualenv,
