@@ -32,6 +32,7 @@ Usage:
   - the "-A" option appends the conda binary folder location, here it is given as an
     environment variable "$CONDAPATH". Leave it off if the PATH knows the location.  
   - the "-e" option gives the name of the conda environment, "py27" in this case.  
+  - TODO probably a good idea to just have nargs='+' for -w or -A and use the second for CONDA env name
   
  \# Currently does not work
  > $ python runmaker.py testagain ntl9 -e py27 -A $CONDAPATH -P CUDA -M pyemma-ionic -N 10 -x 1 -b 1 -l 10000 -p 500 -m 1000
