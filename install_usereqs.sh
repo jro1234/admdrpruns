@@ -2,7 +2,9 @@
 
 CWD=`pwd`
 
-INSTALL_HOME=$PROJWORK/bip149/$USER/admdrp2/
+ENV_BASE=ADMDRP3
+
+INSTALL_HOME=$PROJWORK/bip149/$USER/admdrp3/
 FOLDER_ADMDRP_ENV=admdrpenv/
 FOLDER_ADMDRP=admdrp/
 
@@ -13,10 +15,10 @@ RUTILS_PKG=radical-cybertools/radical.utils.git
 RUTILS_BRANCH=
 
 SAGA_PKG=radical-cybertools/saga-python.git
-SAGA_BRANCH=
+SAGA_BRANCH=fix/issue_1538
 
 RPILOT_PKG=radical-cybertools/radical.pilot.git
-RPILOT_BRANCH=fix/ompi_on_titan
+RPILOT_BRANCH=fix/issue_1538
 
 # User must download OpenMM-Linux precompiled binaries
 # and untar it. This just tells the script where these
@@ -53,15 +55,16 @@ fi
 if [ $APPEND_BASHRC = True ]
 then
   echo "Adding AdaptiveMD-RP Environment Variables to bashrc"
-  echo "export ADMDRP_ENV=$INSTALL_HOME$FOLDER_ADMDRP_ENV" >> ~/.bashrc
-  echo "export ADMDRP_ENV_ACTIVATE=\${ADMDRP_ENV}bin/activate" >> ~/.bashrc
-  echo "export ADMDRP_RUNS=$INSTALL_HOME${FOLDER_ADMDRP}runs/" >> ~/.bashrc
-  echo "export ADMDRP_ADAPTIVEMD=$INSTALL_HOME${FOLDER_ADMDRP}adaptivemd/" >> ~/.bashrc
-  echo "export ADMDRP_DATA=$INSTALL_HOME$FOLDER_ADMDRP" >> ~/.bashrc
+  echo "export ${ENV_BASE}_ENV=$INSTALL_HOME$FOLDER_ADMDRP_ENV" >> ~/.bashrc
+  echo "export ${ENV_BASE}_ENV_ACTIVATE=\${${ENV_BASE}_ENV}bin/activate" >> ~/.bashrc
+  echo "export ${ENV_BASE}_RUNS=$INSTALL_HOME${FOLDER_ADMDRP}runs/" >> ~/.bashrc
+  echo "export ${ENV_BASE}_ADAPTIVEMD=$INSTALL_HOME${FOLDER_ADMDRP}adaptivemd/" >> ~/.bashrc
+  echo "export ${ENV_BASE}_DATA=$INSTALL_HOME$FOLDER_ADMDRP" >> ~/.bashrc
 fi
 
 source ~/.bashrc
-source $ADMDRP_ENV_ACTIVATE
+#eval echo \$${ENV_BASE}_ENV_ACTIVATE
+eval source \$${ENV_BASE}_ENV_ACTIVATE
 
 cat requirements.txt | xargs -n 1 -L 1 pip install
 
