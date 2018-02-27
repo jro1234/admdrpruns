@@ -304,7 +304,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 print("Unrandbreak: \n", unrandbreak)
 
                 #trajectories = project.new_ml_trajectory(engine, unrandbreak, n_run, randomly)
-                trajectories = [project.new_trajectory(engine['pdb_file'], unrandbreak, engine) for _ in range(n_run)]
+                trajectories = [project.new_trajectory(engine['pdb_file'], urb, engine) for urb in unrandbreak]
 
                 #print(trajectories)
                 [tasks.append(t.run(**resource_requirements)) for t in trajectories]
