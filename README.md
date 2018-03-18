@@ -44,6 +44,9 @@ Usage:
  \# CPU Platform
  > $ python runmaker.py test01 ntl9 -w $ADMDRP_ENV_ACTIVATE -P CPU -M pyemma-ionic -N 5 -x 1 -b 1 -l 100 -p 2 -m 10
 
+\# Clients wrapped in PBS launcher
+ > $ python runmaker.py test01 ntl9 --launch -w $ADMDRP_ENV_ACTIVATE -P CPU -M pyemma-ionic -N 5 -x 1 -b 1 -l 100 -p 2 -m 10
+
  \# CUDA Platform
  > $ python runmaker.py test01 ntl9 -w $ADMDRP_ENV_ACTIVATE -P CUDA -M pyemma-ionic -N 5 -x 1 -b 1 -l 100 -p 2 -m 10
 

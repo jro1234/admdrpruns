@@ -1,0 +1,107 @@
+#!/bin/bash
+#PBS -A bip149
+#PBS -N admd
+#PBS -l nodes=2
+#PBS -l walltime=0:30:00
+#PBS -e admd.stderr
+#PBS -o admd.stdout
+#PBS -l gres=atlas1
+
+
+
+
+echo -e "\n\nStarting an AdaptiveMD Job\n------------------------\n\n"
+
+#####################################################
+# Job setup, forward file limits for DB scalability #
+#####################################################
+export APRUN_XFER_LIMITS=1
+cd $PBS_O_WORKDIR
+
+
+EXT_RP_DB=rp
+EXT_ADMD_DB=admd
+
+
+# Sort out some stuff
+RUNNAME={project_name}
+SCRIPT_NAME={strategy}
+ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
+
+
+SYSTEMNAME={system_name}
+PLATFORM=\"{platform}\"
+P_FRAMES={prot}
+M_FRAMES={all}
+CONDAENV=\"{environment}\"
+ACTIVATEPFX=\"{activate_prefix}\"
+VIRTUALENV="{virtualenv}"
+LONGTS=\"{longts}\"
+THREADS={threads}
+LENGTH={length}
+MINLENGTH={minlength}
+N_TRAJ={n_traj}
+N_ROUNDS={n_rounds}
+N_EXT={n_ext}
+MODELLER="{modeller}"
+P_FRAMES={prot}
+M_FRAMES={all}
+
+echo "SENT CLIENT ARGSTRING"
+echo "$EXT_ADMD_DB $RUNNAME $ADMD_SCRIPT $SYSTEMNAME $PLATFORM $CONDAENV $ACTIVATEPFX $VIRTUALENV $LONGTS $THREADS $LENGTH $MINLENGTH $N_TRAJ $N_ROUNDS $N_EXT $MODELLER $P_FRAMES $M_FRAMES"
+
+## APRUN Radical.Pilot DATABASE execution
+## APRUN AdaptiveMD    DATABASE execution
+aprun -n1 -N1 ./launch1.sh $EXT_RP_DB   $RUNNAME & RP_DB_APID=$! > launch1.log
+aprun -n1 -N1 ./launch2.sh $EXT_ADMD_DB $RUNNAME $ADMD_SCRIPT $SYSTEMNAME $PLATFORM $CONDAENV $ACTIVATEPFX $VIRTUALENV $LONGTS $THREADS $LENGTH $MINLENGTH $N_TRAJ $N_ROUNDS $N_EXT $MODELLER $P_FRAMES $M_FRAMES & CLIENT_APID=$! > launch2.log
+
+# TODO THIS STUFF CAN ALL GO IN THIS VERSION
+sleep 25
+RP_DB_HOSTNAME=`cat $RUNNAME.$EXT_RP_DB.hostname`
+ADMD_DB_HOSTNAME=`cat $RUNNAME.$EXT_ADMD_DB.hostname`
+echo "AdaptiveMD    MongoDB Hostname for $RUNNAME: $RP_DB_HOSTNAME"
+echo "Radical Pilot MongoDB Hostname for $RUNNAME: $ADMD_DB_HOSTNAME"
+
+# No admd/rp client at this level, so don't need these DBURL
+#export RADICAL_PILOT_DBURL="mongodb://${{RP_DB_HOSTNAME}}:27017/rp"
+export ADMD_DBURL="mongodb://${{ADMD_DB_HOSTNAME}}:27017/"
+
+
+## HEAD  Radical.Pilot DATABASE execution - for testing from head node
+## LOCAL Radical.Pilot DATABASE execution 
+## LOCAL AdaptiveMD    DATABASE execution
+#mongod --dbpath $HOME/rp.db/ --config $DB_CONFIG > mongo.log & MONGO_PID=$!
+##mongod --dbpath $DB_LOCATION --config $DB_CONFIG > mongo.log & MONGO_PID=$!
+#mongod --dbpath $DB_LOCATION --config $DB_CONFIG > mongo.log & MONGO_PID=$!
+
+
+# Load the environment we are going to use.
+# - AdaptiveMD and RP are installed
+#   under this environment.
+# - THIS should already be loaded
+#module load python
+#source $ADMDRP_ENV_ACTIVATE
+
+###########################
+# This is not necessary   #
+#DB_HOSTNAME={dblocation} #
+###########################
+
+# Initialize the run
+# - this can be done without launching, should always be short
+#python $ADMD_SCRIPT $RUNNAME {system_name} --init_only -P {platform} -p {prot} -m {all}
+#python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME --init_only -P $PLATFORM -p $P_FRAMES -m $M_FRAMES
+
+# Execute the run
+#python $ADMD_SCRIPT $RUNNAME {system_name} --dblocation $DB_HOSTNAME {environment} {activate_prefix} {virtualenv} {longts} -t {threads} -l {length} -k {minlength} -N {n_traj} -b {n_rounds} -x {n_ext} {modeller} -p {prot} -m {all}
+#python $ADMD_SCRIPT $RUNNAME {system_name} {environment} {activate_prefix} {virtualenv} {longts} -t {threads} -l {length} -k {minlength} -N {n_traj} -b {n_rounds} -x {n_ext} {modeller} -p {prot} -m {all}
+#python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME $CONDAENV $ACTIVATEPFX $VIRTUALENV $LONGTS -t $THREADS -l $LENGTH -k $MINLENGTH -N $N_TRAJ -b $N_ROUNDS -x $N_EXT $MODELLER -p $P_FRAMES -m $M_FRAMES
+
+# TODO END OF THIS STUFF CAN ALL GO IN THIS VERSION
+
+wait "$CLIENT_APID"
+sleep 10
+kill "$RP_DB_APID"
+sleep 10
+
+wait

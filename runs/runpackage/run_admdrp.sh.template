@@ -3,20 +3,27 @@
 
 wipeit=$1
 
+# Sort out some stuff
+RUNNAME={project_name}
+SCRIPT_NAME={strategy}
+ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
+# TODO this is just used over and over again
 DB_CONFIG=$ADMD_DB/mongo.test21-10.128.9.56.cfg
-DB_LOCATION=$ADMD_DB/data/{project_name}.db
+RUNDB=$ADMD_DB/data/$RUNNAME.db
+mkdir $RUNDB
+DB_LOCATION=$RUNDB
 
-if [ -d "$DB_LOCATION" ]; then
-  if [ ! -z "$wipeit" ]; then
-    rm -r $DB_LOCATION/*
-    echo "going to empty database"
-  else
-    echo "leaving existing database"
-  fi
-else
-  mkdir $DB_LOCATION
-  echo "going to create empty database"
-fi
+#if [ -d "$DB_LOCATION" ]; then
+#  if [ ! -z "$wipeit" ]; then
+#    rm -r $DB_LOCATION/*
+#    echo "going to empty database"
+#  else
+#    echo "leaving existing database"
+#  fi
+#else
+#  mkdir $DB_LOCATION
+#  echo "going to create empty database"
+#fi
 
 mongod --dbpath $DB_LOCATION --config $DB_CONFIG > mongo.log & MONGO_PID=$!
 
@@ -34,11 +41,6 @@ source $ADMDRP_ENV_ACTIVATE
 # THIS is already in the virtualenv
 #export RP_ENABLE_OLD_DEFINES=True
 #export RADICAL_PILOT_DBURL=mongodb://${{DB_HOSTNAME}}/rp
-
-# Sort out some stuff
-RUNNAME={project_name}
-SCRIPT_NAME={strategy}
-ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
 
 # Initialize the run
 #python $ADMD_SCRIPT $RUNNAME {system_name} --init_only --dblocation $DB_HOSTNAME -P {platform} -p {prot} -m {all}

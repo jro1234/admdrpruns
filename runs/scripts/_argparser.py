@@ -78,6 +78,10 @@ def argparser():
         help="IP address of MongoDB host",
         type=str, default="localhost")
 
+    parser.add_argument("--dburl",
+        help="Full URL of the MongoDB",
+        type=str, default="mongodb://localhost:27017/")
+
     parser.add_argument("-r","--strategy",
         help="Filename of strategy script to run for generating tasks",
         type=str, default="run_admd.py")
@@ -89,6 +93,10 @@ def argparser():
     parser.add_argument("-i","--template", dest="template",
         help="Input job template file, ie admd_workers.pbs",
         type=str, default="run_admdrp.sh")
+
+    parser.add_argument("--launch",
+        help="Use PBS-launched client application",
+        action='store_true')
 
     parser.add_argument("--tica_lag",
         help="TICA lag in frames",

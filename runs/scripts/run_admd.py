@@ -4,20 +4,42 @@
     Usage:
            $ python run_admd.py [name] [additional options]
 
-'''
+    Timestamp format:
+       >>>  TIMER <object> <label> <time>
 
-from __future__ import print_function
+     - object: single word, what we are monitoring
+     - label: a few words, description of timestamp
+     - timestamp: float, the time
+
+      $ if 'TIMER' in timestampline:
+      $     timestamp = timestampline.split('TIMER')[-1].strip().split()
+      $     obj = str(timestamp[0])
+      $     label = [str(l) for l in timestamp[1:-1]]
+      $     t = float(timestamp[-1])
+
+'''
 
 # Import custom adaptivemd init & strategy functions
 from _argparser import argparser
-from __run_admd import init_project, strategy_function
+from __run_admd import init_project, strategy_function, get_logger, formatline
 from adaptivemd.rp.client import Client
-from sys import exit
+from adaptivemd import Task
+import sys
 import time
 
+logger = get_logger(logname=__name__)#, logfile='run_admdrp.'+__name__+'.log')
 
 
-def calculate_request(size_workload, n_workloads, n_steps, steprate=50):
+uuid = lambda x: x.__uuid__
+
+# success, cancelled, fail, halted
+# -  no need for dummy since it will always
+#    be an existing task, and not checked
+final_states = Task.FINAL_STATES + Task.RESTARTABLE_STATES
+task_done = lambda ta: ta.state in final_states
+
+
+def calculate_request(size_workload, n_workloads, n_steps, steprate=300):
     '''
     Calculate the parameters for resource request done by RP.
     The workload to execute will be assessed to estimate these
@@ -54,7 +76,10 @@ def calculate_request(size_workload, n_workloads, n_steps, steprate=50):
     # nodes is not used
     nodes = size_workload 
     gpus = size_workload
-    print("n_steps: ", n_steps, "\nn_workloads: ", n_workloads, "\nsteprate: ", steprate)
+    logger.info(formatline(
+        "\nn_steps: {0}\nn_workloads: {1}\nsteprate: {2}".format(
+                         n_steps, n_workloads, steprate)))
+
     # 5 minutes padding for initialization & such
     # as the minimum walltime
     wallminutes = 10 + int(float(n_steps) * n_workloads / steprate)
@@ -66,10 +91,11 @@ if __name__ == '__main__':
     parser = argparser()
     args = parser.parse_args()
 
-    print("Initializing Project named: ", args.project_name)
+    logger.info("Initializing Project named: " + args.project_name)
     # send selections and frequencies as kwargs
     #fix1#project = init_project(p_name, del_existing, **freq)
-    print(args)
+    logger.info(formatline("\n{}".format(args)))
+    logger.info(formatline("TIMER Project opening {0:.5f}".format(time.time())))
     project = init_project(args.project_name,
                            args.system_name,
                            args.all,
@@ -77,13 +103,17 @@ if __name__ == '__main__':
                            args.platform,
                            args.dblocation)
 
+    logger.info(formatline("TIMER Project opened {0:.5f}".format(time.time())))
+
+    logger.info("AdaptiveMD dburl: {}".format(project.storage._db_url))
+
+
     if args.init_only:
-        print("Leaving project initialized without tasks")
-        exit(0)
+        logger.info("Leaving project '{}' initialized without tasks".format(project.name))
+        sys.exit(0)
 
     else:
-        print("Adding event to project from function:")
-        print(strategy_function)
+        logger.info("Adding event to project from function: {0}, {1}".format(project.name, strategy_function))
 
         if  args.longts:
             ext = '-5'
@@ -96,32 +126,33 @@ if __name__ == '__main__':
         engine = project.generators[nm_engine]
         modeller = project.generators[nm_modeller]
 
-        print("dburl: ", project.storage._db_url)
-
         cpus, nodes, walltime, gpus = calculate_request(
                                       args.n_traj+1,
                                       args.n_rounds,
                                       args.length)#, steprate)
-
-        print("Resource request arguments: ")
-        print("cpus: ", cpus)
-        print("walltime: ", walltime)
-        print("gpus: ", gpus)
 
         project.request_resource(cpus, walltime, gpus, 'current')
 
         client = Client(project.storage._db_url, project.name)
         client.start()
 
-        start_time = time.time()
-        print("TIMER Project add event {0:.5f}".format(time.time()))
+        logger.info(formatline("\nResource request arguments: \ncpus: {0}\nwalltime: {1}\ngpus: {2}".format(cpus, walltime, gpus)))
+        logger.info("n_rounds: {}".format(args.n_rounds))
+
+
+        # Tasks not in this list will be checked for
+        # a final status before stopping RP Client
+        existing_tasks = [uuid(ta) for ta in project.tasks]
+
+        logger.info(formatline("TIMER Project event adding {0:.5f}".format(time.time())))
+
         project.add_event(strategy_function(
             project, engine, args.n_traj,
             args.n_ext, args.length,
             modeller=modeller,
             fixedlength=True,#args.fixedlength,
             minlength=args.minlength,
-            n_workloads=args.n_rounds,
+            n_rounds=args.n_rounds,
             environment=args.environment,
             activate_prefix=args.activate_prefix,
             virtualenv=args.virtualenv,
@@ -129,16 +160,27 @@ if __name__ == '__main__':
             cpu_threads=args.threads,
             ))
 
-        print("Triggering project")
+        logger.info(formatline("TIMER Project event added {0:.5f}".format(time.time())))
+        logger.info("Triggering project")
         project.wait_until(project.events_done)
+        logger.info(formatline("TIMER Project event done {0:.5f}".format(time.time())))
 
-        end_time = time.time()
-        print("Start Time: {0}\nEnd Time: {1}"
-              .format(start_time, end_time))
+        new_tasks = filter(lambda ta: uuid(ta) not in existing_tasks, project.tasks)
+
+        done = False
+        while not done:
+            logger.info("Waiting for final state assignments to new states")
+            time.sleep(1)
+            if all([task_done(ta) for ta in new_tasks]):
+                done = True
+                logger.info("All new tasks finalized")
+                logger.info(formatline("TIMER Project tasks checked {0:.5f}".format(time.time())))
 
         client.stop()
+        project.resources.consume_one()
 
-    print("Exiting Event Script")
+    logger.info("Exiting Event Script")
     project.close()
+    logger.info(formatline("TIMER Project closed {0:.5f}".format(time.time())))
 
 
