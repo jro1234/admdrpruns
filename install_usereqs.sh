@@ -71,8 +71,6 @@ cd $CWD
 #     virtualenv.                                                             #
 ###############################################################################
 
-# TODO use an ADMDRP_PACKAGES variable
-#      to give $ADMDRP_DATA/admdrp/
 # Turn this off to prevent env copies
 # appended to bashrc with reinstalls
 ADD_ENVIRONMENT=True
@@ -84,6 +82,7 @@ ENV_HOME=`echo $ENV_BASE | tr '[:upper:]' '[:lower:]'`
 INSTALL_HOME=$PROJWORK/bip149/$USER/$ENV_HOME/
 FOLDER_ADMDRP_ENV=admdrpenv/
 FOLDER_ADMDRP=admdrp/
+FOLDER_ADMDRP_PKG=pkg/
 
 ADAPTIVEMD_PKG=jrossyra/adaptivemd.git
 ADAPTIVEMD_BRANCH=rp_integration
@@ -104,11 +103,13 @@ OPENMM_LOC=$PROJWORK/bip149/$USER/
 FOLDER_OPENMM=OpenMM-7.0.1-Linux
 OPENMM_LIBRARY_PREFIX=lib/
 OPENMM_PLUGIN_PREFIX=lib/plugins/
-OPENMM_INSTALL_LOC=$INSTALL_HOME$FOLDER_ADMDRP/openmm/
+OPENMM_INSTALL_LOC=$INSTALL_HOME$FOLDER_ADMDRP$FOLDER_ADMDRP_PKG/openmm/
 
 # Start Installation
 module load python
 virtualenv $INSTALL_HOME$FOLDER_ADMDRP_ENV
+installeroutput "Installing under this python:"
+installeroutput `which python`
 
 if [ $ADD_ENVIRONMENT = True ]
 then
@@ -136,8 +137,9 @@ then
   echo "export ${ENV_BASE}_ENV=$INSTALL_HOME$FOLDER_ADMDRP_ENV" >> ~/.bashrc
   echo "export ${ENV_BASE}_ENV_ACTIVATE=\${${ENV_BASE}_ENV}bin/activate" >> ~/.bashrc
   echo "export ${ENV_BASE}_RUNS=$INSTALL_HOME${FOLDER_ADMDRP}runs/" >> ~/.bashrc
-  echo "export ${ENV_BASE}_ADAPTIVEMD=$INSTALL_HOME${FOLDER_ADMDRP}adaptivemd/" >> ~/.bashrc
+  echo "export ${ENV_BASE}_ADAPTIVEMD=$INSTALL_HOME$FOLDER_ADMDRP${FOLDER_ADMDRP_PKG}adaptivemd/" >> ~/.bashrc
   echo "export ${ENV_BASE}_DATA=$INSTALL_HOME$FOLDER_ADMDRP" >> ~/.bashrc
+  echo "export ${ENV_BASE}_PKG=$INSTALL_HOME$FOLDER_ADMDRP$FOLDER_ADMDRP_PKG" >> ~/.bashrc
   installeroutput "Appending library path with OpenMM libraries"
   echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$OPENMM_INSTALL_LOC$OPENMM_PLUGIN_PREFIX" >> ~/.bashrc
   echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$OPENMM_INSTALL_LOC$OPENMM_LIBRARY_PREFIX" >> ~/.bashrc
@@ -147,10 +149,13 @@ then
 fi
 
 source ~/.bashrc
-eval source \$${ENV_BASE}_ENV_ACTIVATE
+source $ADMDRP_ENV_ACTIVATE
+#eval source \$${ENV_BASE}_ENV_ACTIVATE
+installeroutput "Now have this virtualenv python:"
+installeroutput `which python`
 
 # DEPENDENCY INSTALL
-cat requirements.txt | xargs -n 1 -L 1 pip install
+cat requirements.txt | xargs -n 1 -L 1 pip install --upgrade --force-reinstall
 
 cd $INSTALL_HOME
 if [ ! -d "$FOLDER_ADMDRP" ]
@@ -159,8 +164,10 @@ then
   cd $FOLDER_ADMDRP
   mkdir runs/
   cp -rp $CWD/runs/* runs/
+  mkdir $FOLDER_ADMDRP_PKG
+  cd $FOLDER_ADMDRP_PKG
 else
-  cd $FOLDER_ADMDRP
+  cd $FOLDER_ADMDRP$FOLDER_ADMDRP_PKG
 fi
 
 # RADICAL UTILS INSTALL
