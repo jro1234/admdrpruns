@@ -1,59 +1,84 @@
 #!/bin/bash
 
 
+function installeroutput {
+  echo "INSTALLER-   $1"
+}
 
+
+###############################################################################
+#  Install MongoDB                                                            #
+#   - this is treated as a different unit than the Python-based               #
+#     workflow packages installed below. You can leave the vars               #
+#     made here, and the MongoDB installation, when reinstalling              #
+#     the other workflow software                                             #
+###############################################################################
 # these ones saved to environment variables
 INSTALL_ADMD_DB=$PROJWORK/bip149/$USER/
 # Folder names for our installed components
 FOLDER_ADMD_DB=mongodb
 MONGODB_VERSION=3.3.0
-###############################################################################
-#  Install MongoDB                                                            #
-###############################################################################
 if [ ! -x "$(command -v mongod)" ]; then
   cd $INSTALL_ADMD_DB
-  echo "Installing Mongo in: $INSTALL_ADMD_DB"
+  installeroutput "Installing Mongo in: $INSTALL_ADMD_DB"
+  installeroutput "Appending .bashrc with mongo environment for AdaptiveMD Workflows"
   curl -O https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-$MONGODB_VERSION.tgz
   tar -zxvf mongodb-linux-x86_64-$MONGODB_VERSION.tgz
   mkdir mongodb
   mv mongodb-linux-x86_64-$MONGODB_VERSION/ $FOLDER_ADMD_DB
   rm mongodb-linux-x86_64-$MONGODB_VERSION.tgz
-  echo "# APPENDING PATH VARIABLE with AdaptiveMD Environment" >> ~/.bashrc
-  echo "export ADMD_DB=${INSTALL_ADMD_DB}${FOLDER_ADMD_DB}/" >> ~/.bashrc
+  echo -e "\n\n# >> START OF MONGODB ENVIRONMENT VARIABLES" >> ~/.bashrc
+  echo "# APPENDING PATH VARIABLE with MongoDB Binary folder" >> ~/.bashrc
   echo "export PATH=${INSTALL_ADMD_DB}${FOLDER_ADMD_DB}/mongodb-linux-x86_64-$MONGODB_VERSION/bin/:\$PATH" >> ~/.bashrc
+  echo "#on titan, this gets the head node ip address." >> ~/.bashrc
+  echo "# - for production runs, more appropriate db hosts should be used" >> ~/.bashrc
+  echo "#   and the corresponding DBURL variables should be overwritten" >> ~/.bashrc
   echo "export LOGIN_HOSTNAME=`ip addr show bond0 | grep -Eo '(addr:)?([0-9]*\.){3}[0-9]*' | head -n1`" >> ~/.bashrc
-  echo "# NOTE These should be overwritten according to the"
-  echo "#      actual `mongod` instance host ip. Using the"
-  echo "#      launched-method of workflow, these will be"
-  echo "#      configured automatically at runtime and"
-  echo "#      overwrite with correct locations."
-  echo "export RADICAL_PILOT_DBURL=\"mongodb://\${LOGIN_HOSTNAME}:27777/rp\""
-  echo "export ADMD_DBURL=\"mongodb://\${LOGIN_HOSTNAME}:27017/\""
-  echo "Done installing Mongo, appended PATH with mongodb bin folder"
+  echo "export ADMD_DB=${INSTALL_ADMD_DB}${FOLDER_ADMD_DB}/" >> ~/.bashrc
+  echo -e "# >> END OF MONGODB ENVIRONMENT VARIABLES\n\n" >> ~/.bashrc
+  echo "# NOTE These should be overwritten according to the" >> ~/.bashrc
+  echo "#      actual `mongod` instance host ip. Using the" >> ~/.bashrc
+  echo "#      launched-method of workflow, these will be" >> ~/.bashrc
+  echo "#      configured automatically at runtime and" >> ~/.bashrc
+  echo "#      overwrite with correct locations." >> ~/.bashrc
+  echo "export RADICAL_PILOT_DBURL=\"mongodb://\${LOGIN_HOSTNAME}:27777/rp\"" >> ~/.bashrc
+  echo "export ADMD_DBURL=\"mongodb://\${LOGIN_HOSTNAME}:27017/\"" >> ~/.bashrc
+  installeroutput "Done installing Mongo, appended PATH with mongodb bin folder"
   source ~/.bashrc
-  echo "MongoDB daemon installed here: "
+  installeroutput "MongoDB daemon installed here: "
 else
-  echo "Found MongoDB already installed at: "
+  installeroutput "Found MongoDB already installed at: "
 fi
-which mongod
+installeroutput `which mongod`
+###############################################################################
+#   Done installing MongoDB                                                   #
+###############################################################################
 
 
 
 
+###############################################################################
+#  Installing Workflow Components                                             #
+#   - mostly using pip install of package list                                #
+#   - OpenMM is separately downloaded from the location:                      #
+#https://simtk.org/frs/download_confirm.php/file/4904/OpenMM-7.0.1-Linux.zip  #
+#     requiring a login. Unzip it in the directory $OPENMM_LOC                #
+#     and this installer will create an instance in the                       #
+#     virtualenv.                                                             #
+###############################################################################
 
+# TODO use an ADMDRP_PACKAGES variable
+#      to give $ADMDRP_DATA/admdrp/
 # Nothing will work if this is False
-# or these aren't already given by 
+# or these vars aren't already given by 
 # a prior installation
 ### For each install
 APPEND_BASHRC=True
-
 # Turn this off to prevent env copies
 # appended to bashrc with reinstalls
 ADD_ENVIRONMENT=True
 
-#DEBUG
-#TIMESTAMPS
-
+# Configuring the installation
 CWD=`pwd`
 ENV_BASE=ADMDRP
 ENV_HOME=`echo $ENV_BASE | tr '[:upper:]' '[:lower:]'`
@@ -79,27 +104,26 @@ RPILOT_BRANCH=$RCT_DEDICATED_ADAPTIVEMD_BRANCH
 #https://simtk.org/frs/download_confirm.php/file/4904/OpenMM-7.0.1-Linux.zip?group_id=161
 OPENMM_LOC=$PROJWORK/bip149/$USER/
 FOLDER_OPENMM=OpenMM-7.0.1-Linux
-
 OPENMM_LIBRARY_PREFIX=lib/
 OPENMM_PLUGIN_PREFIX=lib/plugins/
 OPENMM_INSTALL_LOC=$INSTALL_HOME$FOLDER_ADMDRP/openmm/
 
-
+# Start Installation
 module load python
 virtualenv $INSTALL_HOME$FOLDER_ADMDRP_ENV
 
 if [ $ADD_ENVIRONMENT = True ]
 then
-  #echo "Appending virtualenv activate script"
+  #installeroutput "Appending virtualenv activate script"
   #RP_VARSLOC=$INSTALL_HOME$FOLDER_ADMDRP_ENV/bin/activate
-  echo "Appending bashrc with RP Environment Vars for DEBUG"
+  installeroutput "Appending bashrc with Environment Vars for Workflow"
   RP_VARSLOC=~/.bashrc
 
   echo "# This is home to the execution working directories" >> $RP_VARSLOC
   echo "# ie the Radical Pilot Sandbox" >> $RP_VARSLOC
   echo "export RADICAL_SANDBOX=$MEMBERWORK/bip149/radical.pilot.sandbox/" >> $RP_VARSLOC
 
-  echo "#ENVIRONMENT VARIABLES to control output" >> $RP_VARSLOC
+  echo "#ENVIRONMENT VARIABLES to Workflow control output" >> $RP_VARSLOC
   echo "#export RADICAL_PILOT_PROFILE=\"True\"" >> $RP_VARSLOC
   echo "#export RADICAL_PROFILE=\"True\"" >> $RP_VARSLOC
   echo "export ADMD_PROFILE=\"INFO\"" >> $RP_VARSLOC
@@ -119,14 +143,13 @@ then
   echo "export ${ENV_BASE}_RUNS=$INSTALL_HOME${FOLDER_ADMDRP}runs/" >> ~/.bashrc
   echo "export ${ENV_BASE}_ADAPTIVEMD=$INSTALL_HOME${FOLDER_ADMDRP}adaptivemd/" >> ~/.bashrc
   echo "export ${ENV_BASE}_DATA=$INSTALL_HOME$FOLDER_ADMDRP" >> ~/.bashrc
-  echo "FOR YOUR WORKFLOW TO RUN PROPERLY, UNCOMMENT THIS"
-  echo "LINE IN YOUR .bashrc FILE"
-  echo "source \$ADMDRP_ENV_ACTIVATE"
-  echo "source \$ADMDRP_ENV_ACTIVATE" >> ~/.bashrc
+  installeroutput "FOR YOUR WORKFLOW TO RUN PROPERLY, UNCOMMENT THIS"
+  installeroutput "LINE IN YOUR .bashrc FILE"
+  installeroutput "source \$ADMDRP_ENV_ACTIVATE"
+  echo "#source \$ADMDRP_ENV_ACTIVATE" >> ~/.bashrc
 fi
 
 source ~/.bashrc
-#eval echo \$${ENV_BASE}_ENV_ACTIVATE
 eval source \$${ENV_BASE}_ENV_ACTIVATE
 
 # DEPENDENCY INSTALL
@@ -183,6 +206,8 @@ expect -c "
     send  \"\r\"
     expect eof
     "
+
+installeroutput "Appending library path with OpenMM libraries"
 echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$OPENMM_INSTALL_LOC$OPENMM_PLUGIN_PREFIX" >> ~/.bashrc
 echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$OPENMM_INSTALL_LOC$OPENMM_LIBRARY_PREFIX" >> ~/.bashrc
 
