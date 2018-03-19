@@ -1,6 +1,12 @@
 #!/bin/bash
 
 
+# TODO fix multiple re/un installs of:
+#         pymongo, numpy, ...
+#
+# TODO add simtk.testInstallation and import tests
+
+
 function installeroutput {
   echo "INSTALLER-   $1"
 }
@@ -211,6 +217,7 @@ expect -c "
     send  \"\r\"
     expect eof
     "
+
 
 installeroutput "FOR YOUR WORKFLOW TO RUN PROPERLY, UNCOMMENT THIS"
 installeroutput "LINE IN YOUR .bashrc FILE"
