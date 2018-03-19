@@ -2,6 +2,7 @@ zmq
 pyyaml
 six
 ujson
+jsonschema
 cython==0.27.3
 numpy==1.13.3
 pandas==0.21.0
