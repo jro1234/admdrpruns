@@ -650,11 +650,11 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         #print("Checking if all done")
         idle_time = 20
 
-        # First can check the mtask
-        # - if it's not done, then we're not all_done anyway
-        project.tasks._set.load(mtask.__uuid__, force_load=True)
-        #print("MTASK IS::::::::", mtask, mtask.state)
         if mtask:
+            # First can check the mtask
+            # - if it's not done, then we're not all_done anyway
+            project.tasks._set.load(mtask.__uuid__, force_load=True)
+            #print("MTASK IS::::::::", mtask, mtask.state)
             if mtask:
                 _mtask = get_task_dbentry(project, mtask)
 

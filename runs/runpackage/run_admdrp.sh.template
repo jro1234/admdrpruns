@@ -7,11 +7,12 @@ wipeit=$1
 RUNNAME={project_name}
 SCRIPT_NAME={strategy}
 ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
-# TODO this is just used over and over again
-DB_CONFIG=$ADMD_DB/mongo.test21-10.128.9.56.cfg
+DB_HOSTNAME=$LOGIN_HOSTNAME
+DB_CONFIG=$ADMD_DB/mongo.$RUNNAME-$DB_HOSTNAME.cfg
 RUNDB=$ADMD_DB/data/$RUNNAME.db
 mkdir $RUNDB
 DB_LOCATION=$RUNDB
+DB_SOCKET=${{ADMD_DB}}data/$DB_HOSTNAME/
 
 #if [ -d "$DB_LOCATION" ]; then
 #  if [ ! -z "$wipeit" ]; then
@@ -24,6 +25,9 @@ DB_LOCATION=$RUNDB
 #  mkdir $DB_LOCATION
 #  echo "going to create empty database"
 #fi
+
+mkdir $DB_SOCKET
+echo -e "net:\n   unixDomainSocket:\n      pathPrefix: $DB_SOCKET\n   bindIp: 0.0.0.0" > $DB_CONFIG
 
 mongod --dbpath $DB_LOCATION --config $DB_CONFIG > mongo.log & MONGO_PID=$!
 
