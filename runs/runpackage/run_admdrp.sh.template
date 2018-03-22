@@ -7,29 +7,35 @@ wipeit=$1
 RUNNAME={project_name}
 SCRIPT_NAME={strategy}
 ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
-DB_HOSTNAME=$LOGIN_HOSTNAME
-DB_CONFIG=$ADMD_DB/mongo.$RUNNAME-$DB_HOSTNAME.cfg
-RUNDB=$ADMD_DB/data/$RUNNAME.db
-mkdir $RUNDB
-DB_LOCATION=$RUNDB
-DB_SOCKET=${{ADMD_DB}}data/$DB_HOSTNAME/
-
-#if [ -d "$DB_LOCATION" ]; then
-#  if [ ! -z "$wipeit" ]; then
-#    rm -r $DB_LOCATION/*
-#    echo "going to empty database"
-#  else
-#    echo "leaving existing database"
-#  fi
-#else
-#  mkdir $DB_LOCATION
-#  echo "going to create empty database"
-#fi
-
-mkdir $DB_SOCKET
-echo -e "net:\n   unixDomainSocket:\n      pathPrefix: $DB_SOCKET\n   bindIp: 0.0.0.0" > $DB_CONFIG
-
-mongod --dbpath $DB_LOCATION --config $DB_CONFIG > mongo.log & MONGO_PID=$!
+# PERSISTENT DB IS ACCESSIBLE via my ssh_auth.py port
+#               - need to try having someone else
+#                 connect via the port
+#               CURRENT IS on titan-ext5
+#             ADMD_DBURL="mongodb://160.91.205.206:27017/
+#    RADICAL_PILOT_DBURL="mongodb://160.91.205.206:27017/rp/
+# PERSISTENT DB #DB_HOSTNAME=$LOGIN_HOSTNAME
+# PERSISTENT DB #DB_CONFIG=$ADMD_DB/mongo.$RUNNAME-$DB_HOSTNAME.cfg
+# PERSISTENT DB #RUNDB=$ADMD_DB/data/$RUNNAME.db
+# PERSISTENT DB #mkdir $RUNDB
+# PERSISTENT DB #DB_LOCATION=$RUNDB
+# PERSISTENT DB #DB_SOCKET=${{ADMD_DB}}data/$DB_HOSTNAME/
+# PERSISTENT DB #
+# PERSISTENT DB ##if [ -d "$DB_LOCATION" ]; then
+# PERSISTENT DB ##  if [ ! -z "$wipeit" ]; then
+# PERSISTENT DB ##    rm -r $DB_LOCATION/*
+# PERSISTENT DB ##    echo "going to empty database"
+# PERSISTENT DB ##  else
+# PERSISTENT DB ##    echo "leaving existing database"
+# PERSISTENT DB ##  fi
+# PERSISTENT DB ##else
+# PERSISTENT DB ##  mkdir $DB_LOCATION
+# PERSISTENT DB ##  echo "going to create empty database"
+# PERSISTENT DB ##fi
+# PERSISTENT DB #
+# PERSISTENT DB #mkdir $DB_SOCKET
+# PERSISTENT DB #echo -e "net:\n   unixDomainSocket:\n      pathPrefix: $DB_SOCKET\n   bindIp: 0.0.0.0" > $DB_CONFIG
+# PERSISTENT DB #
+# PERSISTENT DB #mongod --dbpath $DB_LOCATION --config $DB_CONFIG > mongo.log & MONGO_PID=$!
 
 # Load the environment we are going to use.
 # - AdaptiveMD and RP are installed
