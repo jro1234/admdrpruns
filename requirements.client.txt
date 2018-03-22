@@ -1,0 +1,6 @@
+zmq
+pyyaml
+six
+ujson
+jsonschema
+pymongo==3.5.1
