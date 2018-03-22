@@ -88,99 +88,109 @@ def calculate_request(size_workload, n_workloads, n_steps, steprate=300):
 
 if __name__ == '__main__':
 
-    parser = argparser()
-    args = parser.parse_args()
+    project = None
 
-    logger.info("Initializing Project named: " + args.project_name)
-    # send selections and frequencies as kwargs
-    #fix1#project = init_project(p_name, del_existing, **freq)
-    logger.info(formatline("\n{}".format(args)))
-    logger.info(formatline("TIMER Project opening {0:.5f}".format(time.time())))
-    project = init_project(args.project_name,
-                           args.system_name,
-                           args.all,
-                           args.prot,
-                           args.platform,
-                           args.dblocation)
+    try:
 
-    logger.info(formatline("TIMER Project opened {0:.5f}".format(time.time())))
+        parser = argparser()
+        args = parser.parse_args()
 
-    logger.info("AdaptiveMD dburl: {}".format(project.storage._db_url))
+        logger.info("Initializing Project named: " + args.project_name)
+        # send selections and frequencies as kwargs
+        #fix1#project = init_project(p_name, del_existing, **freq)
+        logger.info(formatline("\n{}".format(args)))
+        logger.info(formatline("TIMER Project opening {0:.5f}".format(time.time())))
+        project = init_project(args.project_name,
+                               args.system_name,
+                               args.all,
+                               args.prot,
+                               args.platform,)
+                               #args.dblocation)
+
+        logger.info(formatline("TIMER Project opened {0:.5f}".format(time.time())))
+
+        logger.info("AdaptiveMD dburl: {}".format(project.storage._db_url))
 
 
-    if args.init_only:
-        logger.info("Leaving project '{}' initialized without tasks".format(project.name))
-        sys.exit(0)
+        if args.init_only:
+            logger.info("Leaving project '{}' initialized without tasks".format(project.name))
 
-    else:
-        logger.info("Adding event to project from function: {0}, {1}".format(project.name, strategy_function))
-
-        if  args.longts:
-            ext = '-5'
         else:
-            ext = '-2'
+            logger.info("Adding event to project from function: {0}, {1}".format(project.name, strategy_function))
 
-        nm_engine = 'openmm' + ext
-        nm_modeller = args.modeller + ext
+            if  args.longts:
+                ext = '-5'
+            else:
+                ext = '-2'
 
-        engine = project.generators[nm_engine]
-        modeller = project.generators[nm_modeller]
+            nm_engine = 'openmm' + ext
+            nm_modeller = args.modeller + ext
 
-        cpus, nodes, walltime, gpus = calculate_request(
-                                      args.n_traj+1,
-                                      args.n_rounds,
-                                      args.length)#, steprate)
+            engine = project.generators[nm_engine]
+            modeller = project.generators[nm_modeller]
 
-        project.request_resource(cpus, walltime, gpus, 'current')
+            cpus, nodes, walltime, gpus = calculate_request(
+                                          args.n_traj+1,
+                                          args.n_rounds,
+                                          args.length)#, steprate)
 
-        client = Client(project.storage._db_url, project.name)
-        client.start()
+            project.request_resource(cpus, walltime, gpus, 'current')
 
-        logger.info(formatline("\nResource request arguments: \ncpus: {0}\nwalltime: {1}\ngpus: {2}".format(cpus, walltime, gpus)))
-        logger.info("n_rounds: {}".format(args.n_rounds))
+            client = Client(project.storage._db_url, project.name)
+            client.start()
+
+            logger.info(formatline("\nResource request arguments: \ncpus: {0}\nwalltime: {1}\ngpus: {2}".format(cpus, walltime, gpus)))
+            logger.info("n_rounds: {}".format(args.n_rounds))
 
 
-        # Tasks not in this list will be checked for
-        # a final status before stopping RP Client
-        existing_tasks = [uuid(ta) for ta in project.tasks]
+            # Tasks not in this list will be checked for
+            # a final status before stopping RP Client
+            existing_tasks = [uuid(ta) for ta in project.tasks]
 
-        logger.info(formatline("TIMER Project event adding {0:.5f}".format(time.time())))
+            logger.info(formatline("TIMER Project event adding {0:.5f}".format(time.time())))
 
-        project.add_event(strategy_function(
-            project, engine, args.n_traj,
-            args.n_ext, args.length,
-            modeller=modeller,
-            fixedlength=True,#args.fixedlength,
-            minlength=args.minlength,
-            n_rounds=args.n_rounds,
-            environment=args.environment,
-            activate_prefix=args.activate_prefix,
-            virtualenv=args.virtualenv,
-            longest=args.all,
-            cpu_threads=args.threads,
-            ))
+            project.add_event(strategy_function(
+                project, engine, args.n_traj,
+                args.n_ext, args.length,
+                modeller=modeller,
+                fixedlength=True,#args.fixedlength,
+                minlength=args.minlength,
+                n_rounds=args.n_rounds,
+                environment=args.environment,
+                activate_prefix=args.activate_prefix,
+                virtualenv=args.virtualenv,
+                longest=args.all,
+                cpu_threads=args.threads,
+                ))
 
-        logger.info(formatline("TIMER Project event added {0:.5f}".format(time.time())))
-        logger.info("Triggering project")
-        project.wait_until(project.events_done)
-        logger.info(formatline("TIMER Project event done {0:.5f}".format(time.time())))
+            logger.info(formatline("TIMER Project event added {0:.5f}".format(time.time())))
+            logger.info("Triggering project")
+            project.wait_until(project.events_done)
+            logger.info(formatline("TIMER Project event done {0:.5f}".format(time.time())))
 
-        new_tasks = filter(lambda ta: uuid(ta) not in existing_tasks, project.tasks)
+            new_tasks = filter(lambda ta: uuid(ta) not in existing_tasks, project.tasks)
 
-        done = False
-        while not done:
-            logger.info("Waiting for final state assignments to new states")
-            time.sleep(1)
-            if all([task_done(ta) for ta in new_tasks]):
-                done = True
-                logger.info("All new tasks finalized")
-                logger.info(formatline("TIMER Project tasks checked {0:.5f}".format(time.time())))
+            done = False
+            while not done:
+                logger.info("Waiting for final state assignments to new states")
+                time.sleep(1)
+                if all([task_done(ta) for ta in new_tasks]):
+                    done = True
+                    logger.info("All new tasks finalized")
+                    logger.info(formatline("TIMER Project tasks checked {0:.5f}".format(time.time())))
 
-        client.stop()
-        project.resources.consume_one()
+            client.stop()
+            project.resources.consume_one()
 
-    logger.info("Exiting Event Script")
-    project.close()
-    logger.info(formatline("TIMER Project closed {0:.5f}".format(time.time())))
+    except KeyboardInterrupt:
+        logger.info("KEYBOARD INTERRUPT")
+
+    finally:
+
+        if project:
+            project.close()
+
+        logger.info("Exiting Event Script")
+        logger.info(formatline("TIMER Project closed {0:.5f}".format(time.time())))
 
 

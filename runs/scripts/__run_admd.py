@@ -729,7 +729,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
 
 def init_project(p_name, sys_name, m_freq, p_freq,
-                 platform, dblocation=None):
+                 platform):#, dblocation=None):
 #def init_project(p_name, **freq):
 
     from adaptivemd import Project
@@ -738,11 +738,15 @@ def init_project(p_name, sys_name, m_freq, p_freq,
     #    print("Deleting existing version of this test project") 
     #    Project.delete(p_name)
 
-    if dblocation is not None:
+    dburl = os.environ.get("ADMD_DBURL")
+    if dburl:
+        logger.info("Set ADMD_DBURL to: "+dburl)
+        Project.set_dburl(dburl)
+   # if dblocation is not None:
 
-        Project.set_dblocation(dblocation)
+   #     Project.set_dblocation(dblocation)
 
-    #project = Project(p_name)
+    project = Project(p_name)
 
     if p_name in Project.list():
         logger.info("Project {0} exists, reading it from database"

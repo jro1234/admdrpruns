@@ -746,7 +746,7 @@ def init_project(p_name, sys_name, m_freq, p_freq,
 
    #     Project.set_dblocation(dblocation)
 
-    project = Project(p_name)
+    #project = Project(p_name)
 
     if p_name in Project.list():
         logger.info("Project {0} exists, reading it from database"
