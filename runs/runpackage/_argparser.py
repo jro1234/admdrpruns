@@ -77,13 +77,13 @@ def argparser():
         help="Simulation Platform: Reference, CPU, CUDA, or OpenCL",
         default="CPU", type=stripper)
 
-    parser.add_argument("-d","--dblocation",
-        help="IP address of MongoDB host",
-        default="localhost", type=stripper)
+  #  parser.add_argument("-d","--dblocation",
+  #      help="IP address of MongoDB host",
+  #      default="localhost", type=stripper)
 
-    parser.add_argument("--dburl",
-        help="Full URL of the MongoDB",
-        default="mongodb://localhost:27017/", type=stripper)
+  #  parser.add_argument("--dburl",
+  #      help="Full URL of the MongoDB",
+  #      default="mongodb://localhost:27017/", type=stripper)
 
     parser.add_argument("-r","--strategy",
         help="Filename of strategy script to run for generating tasks",
