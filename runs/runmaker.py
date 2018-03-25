@@ -64,7 +64,7 @@ if __name__ == "__main__":
                 system_name  = args.system_name,
                 longts       = '--longts' if args.longts else '',
                 strategy     = args.strategy,
-                dblocation   = args.dblocation,
+                #dblocation   = args.dblocation,
                 platform     = args.platform,
                 environment  = '-e '+args.environment if args.environment else '',
                 activate_prefix = '-A '+args.activate_prefix if args.activate_prefix else '',

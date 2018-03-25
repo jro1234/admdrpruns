@@ -45,7 +45,7 @@ source $ADMDRP_ENV_ACTIVATE
 
 ###########################
 # This is not necessary   #
-#DB_HOSTNAME={dblocation} #
+#DB_HOSTNAME={{dblocation}} #
 ###########################
 
 # THIS is already in the virtualenv

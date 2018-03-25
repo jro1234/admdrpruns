@@ -39,7 +39,7 @@ final_states = Task.FINAL_STATES + Task.RESTARTABLE_STATES
 task_done = lambda ta: ta.state in final_states
 
 
-def calculate_request(size_workload, n_workloads, n_steps, steprate=300):
+def calculate_request(size_workload, n_workloads, n_steps, steprate=150):
     '''
     Calculate the parameters for resource request done by RP.
     The workload to execute will be assessed to estimate these
@@ -104,8 +104,10 @@ if __name__ == '__main__':
                                args.system_name,
                                args.all,
                                args.prot,
-                               args.platform,)
-                               #args.dblocation)
+                               args.platform,
+                               reinitialize=args.reinitialize,
+                               #args.dblocation
+                              )
 
         logger.info(formatline("TIMER Project opened {0:.5f}".format(time.time())))
 

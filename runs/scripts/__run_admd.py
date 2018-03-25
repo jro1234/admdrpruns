@@ -302,7 +302,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         logger.info("Queued First Tasks in new project")
         logger.info(formatline("\nTrajectory lengths were: \n{0}".format(randbreak)))
 
-        yield lambda: any([ta.is_done() for ta in tasks])
+        yield lambda: all([ta.is_done() for ta in tasks])
+        #yield lambda: any([ta.is_done() for ta in tasks])
 
         logger.info("First Tasks are done")
         logger.info(formatline("TIMER Brain first tasks done {0:.5f}".format(time.time())))
@@ -337,6 +338,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 #trajectories = [project.new_trajectory(engine['pdb_file'], lengtharg, engine) for _ in range(n_run)]
                 logger.info(formatline("TIMER Brain fresh tasks define {0:.5f}".format(time.time())))
                 trajectories = project.new_ml_trajectory(engine, lengtharg, n_run)
+                logger.info(formatline("TIMER Brain fresh tasks defined {0:.5f}".format(time.time())))
                 #trajectories = project.new_ml_trajectory(engine, lengtharg, n_run, randomly)
 
                 # could use the initial PDB for next round
@@ -345,6 +347,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
                 #print(trajectories)
                 if not n_rounds or not c.done:
+                    logger.info("ENTERING task queuer")
                     #[tasks.append(t.run(export_path=export_path)) for t in trajectories]
                     [tasks.append(t.run(**resource_requirements)) for t in trajectories]
                     add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads)
@@ -380,7 +383,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
             #print(tasks)
             #print("First Extensions' status':\n", [ta.state for ta in tasks])
-            return any([ta.is_done() for ta in tasks[:-1]])
+            #return any([ta.is_done() for ta in tasks[:-1]])
+            return all([ta.is_done() for ta in tasks[:-1]])
 
         # LAST workload in this execution
         elif c_ext == n_ext:
@@ -417,7 +421,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     project.queue(tasks)
 
                 logger.info(formatline("TIMER Brain last tasks queued {0:.5f}".format(time.time())))
-            return any([ta.is_done() for ta in tasks])
+            #return any([ta.is_done() for ta in tasks])
+            return all([ta.is_done() for ta in tasks])
 
         else:
             # MODEL TASK MAY NOT BE CREATED
@@ -447,14 +452,17 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
                     tasks.append(mtask)
 
-                    return any([ta.is_done() for ta in tasks[:-1]])
+                    #return any([ta.is_done() for ta in tasks[:-1]])
+                    return all([ta.is_done() for ta in tasks[:-1]])
 
                 else:
-                    return any([ta.is_done() for ta in tasks])
+                    #return any([ta.is_done() for ta in tasks])
+                    return all([ta.is_done() for ta in tasks])
 
             else:
                 #print("not restarting with existing tasks")
-                return any([ta.is_done() for ta in tasks])
+                #return any([ta.is_done() for ta in tasks])
+                return all([ta.is_done() for ta in tasks])
 
     c_ext = 0
     mtask = None
@@ -514,65 +522,65 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         priorext = 0
         # TODO fix, this isn't a consistent name "trajectories"
         trajectories = set()
-        while not done and ( not n_rounds or not c.done ):
+   #####     while not done and ( not n_rounds or not c.done ):
 
-            #print("looking for too-short trajectories")
-            if c.done:
-                xtasks = list()
-            else:
-                #logger.info(formatline("TIMER Brain ext tasks define {0:.5f}".format(time.time())))
-                xtasks = check_trajectory_minlength(project, minlength,
-                    n_steps, n_run, environment=environment,
-                    activate_prefix=activate_prefix, virtualenv=virtualenv,
-                    openmm_threads=openmm_threads, resource_requirements=resource_requirements)
+   #####         #print("looking for too-short trajectories")
+   #####         if c.done:
+   #####             xtasks = list()
+   #####         else:
+   #####             #logger.info(formatline("TIMER Brain ext tasks define {0:.5f}".format(time.time())))
+   #####             xtasks = check_trajectory_minlength(project, minlength,
+   #####                 n_steps, n_run, environment=environment,
+   #####                 activate_prefix=activate_prefix, virtualenv=virtualenv,
+   #####                 openmm_threads=openmm_threads, resource_requirements=resource_requirements)
 
-            tnames = set()
-            if len(trajectories) > 0:
-                [tnames.add(_) for _ in set(zip(*trajectories)[0])]
+   #####         tnames = set()
+   #####         if len(trajectories) > 0:
+   #####             [tnames.add(_) for _ in set(zip(*trajectories)[0])]
 
-            #if xtasks:
-            #    logger.info(formatline("TIMER Brain ext tasks queue {0:.5f}".format(time.time())))
-            for xta in xtasks:
-                tname = xta.trajectory.basename
+   #####         #if xtasks:
+   #####         #    logger.info(formatline("TIMER Brain ext tasks queue {0:.5f}".format(time.time())))
+   #####         for xta in xtasks:
+   #####             tname = xta.trajectory.basename
 
-                if tname not in tnames:
-                    tnames.add(tname)
-                    trajectories.add( (tname, xta) )
-                    project.queue(xta)
+   #####             if tname not in tnames:
+   #####                 tnames.add(tname)
+   #####                 trajectories.add( (tname, xta) )
+   #####                 project.queue(xta)
 
-            #if xtasks:
-            #    logger.info(formatline("TIMER Brain ext tasks queued {0:.5f}".format(time.time())))
-            removals = list()
-            for tname, xta in trajectories:
-                if xta.state in {"fail","halted","success","cancelled"}:
-                    removals.append( (tname, xta) )
+   #####         #if xtasks:
+   #####         #    logger.info(formatline("TIMER Brain ext tasks queued {0:.5f}".format(time.time())))
+   #####         removals = list()
+   #####         for tname, xta in trajectories:
+   #####             if xta.state in {"fail","halted","success","cancelled"}:
+   #####                 removals.append( (tname, xta) )
 
-            for removal in removals:
-                trajectories.remove(removal)
+   #####         for removal in removals:
+   #####             trajectories.remove(removal)
 
-            if len(trajectories) == n_run and priorext < n_run:
-                logger.info("Have full width of extensions")
-                c.increment()
+   #####         if len(trajectories) == n_run and priorext < n_run:
+   #####             logger.info("Have full width of extensions")
+   #####             c.increment()
 
-            # setting this to look at next round
-            priorext = len(trajectories)
+   #####         # setting this to look at next round
+   #####         priorext = len(trajectories)
 
-            if len(trajectories) == 0:
-                if lastcheck:
-                    logger.info("Extensions last check")
-                    lastcheck = False
-                    time.sleep(15)
+   #####         if len(trajectories) == 0:
+   #####             if lastcheck:
+   #####                 logger.info("Extensions last check")
+   #####                 lastcheck = False
+   #####                 time.sleep(15)
 
-                else:
-                    logger.info("Extensions are done")
-                    #logger.info(formatline("TIMER Brain ext tasks done {0:.5f}".format(time.time())))
-                    done = True
+   #####             else:
+   #####                 logger.info("Extensions are done")
+   #####                 #logger.info(formatline("TIMER Brain ext tasks done {0:.5f}".format(time.time())))
+   #####                 done = True
 
-            else:
-                if not lastcheck:
-                    lastcheck = True
+   #####         else:
+   #####             if not lastcheck:
+   #####                 lastcheck = True
 
-                time.sleep(15)
+   #####             time.sleep(15)
 
         logger.info("----------- Extension #{0}".format(c_ext))
 
@@ -683,10 +691,10 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 time.sleep(idle_time)
                 return False
 
-        n_waiting = len(project.tasks) - len(list(filter(
+        n_waiting = len(project.tasks) - len(filter(
             # TODO establish / utilize FINAL_STATES
             lambda ta: ta.state in {'dummy','cancelled', 'success'},
-            project.tasks)))
+            project.tasks))
             #lambda ta: ta['state'] in {'dummy','cancelled', 'success'},
             #project.storage.tasks._document.find())))
 
@@ -729,7 +737,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
 
 def init_project(p_name, sys_name, m_freq, p_freq,
-                 platform):#, dblocation=None):
+                 platform, reinitialize=False):#, dblocation=None):
 #def init_project(p_name, **freq):
 
     from adaptivemd import Project
@@ -746,11 +754,16 @@ def init_project(p_name, sys_name, m_freq, p_freq,
 
    #     Project.set_dblocation(dblocation)
 
-    project = Project(p_name)
+    if reinitialize:
+        logger.info("Project {0} exists, deleting it from database to reinialize"
+            .format(p_name))
+
+        Project.delete(p_name)
 
     if p_name in Project.list():
+
         logger.info("Project {0} exists, reading it from database"
-              .format(p_name))
+            .format(p_name))
 
         project = Project(p_name)
 

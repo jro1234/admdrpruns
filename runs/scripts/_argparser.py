@@ -12,6 +12,10 @@ def argparser():
     parser.add_argument("project_name",
         help="Name of project", type=stripper)
 
+    parser.add_argument("--reinit", dest="reinitialize",
+        help="Delete project if exists to reinitialize",
+        action='store_true')
+
     parser.add_argument("system_name",
         help="Name of system", type=stripper)
 
