@@ -522,65 +522,65 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         priorext = 0
         # TODO fix, this isn't a consistent name "trajectories"
         trajectories = set()
-   #####     while not done and ( not n_rounds or not c.done ):
+        while not done and ( not n_rounds or not c.done ):
 
-   #####         #print("looking for too-short trajectories")
-   #####         if c.done:
-   #####             xtasks = list()
-   #####         else:
-   #####             #logger.info(formatline("TIMER Brain ext tasks define {0:.5f}".format(time.time())))
-   #####             xtasks = check_trajectory_minlength(project, minlength,
-   #####                 n_steps, n_run, environment=environment,
-   #####                 activate_prefix=activate_prefix, virtualenv=virtualenv,
-   #####                 openmm_threads=openmm_threads, resource_requirements=resource_requirements)
+            #print("looking for too-short trajectories")
+            if c.done:
+                xtasks = list()
+            else:
+                #logger.info(formatline("TIMER Brain ext tasks define {0:.5f}".format(time.time())))
+                xtasks = check_trajectory_minlength(project, minlength,
+                    n_steps, n_run, environment=environment,
+                    activate_prefix=activate_prefix, virtualenv=virtualenv,
+                    openmm_threads=openmm_threads, resource_requirements=resource_requirements)
 
-   #####         tnames = set()
-   #####         if len(trajectories) > 0:
-   #####             [tnames.add(_) for _ in set(zip(*trajectories)[0])]
+            tnames = set()
+            if len(trajectories) > 0:
+                [tnames.add(_) for _ in set(zip(*trajectories)[0])]
 
-   #####         #if xtasks:
-   #####         #    logger.info(formatline("TIMER Brain ext tasks queue {0:.5f}".format(time.time())))
-   #####         for xta in xtasks:
-   #####             tname = xta.trajectory.basename
+            #if xtasks:
+            #    logger.info(formatline("TIMER Brain ext tasks queue {0:.5f}".format(time.time())))
+            for xta in xtasks:
+                tname = xta.trajectory.basename
 
-   #####             if tname not in tnames:
-   #####                 tnames.add(tname)
-   #####                 trajectories.add( (tname, xta) )
-   #####                 project.queue(xta)
+                if tname not in tnames:
+                    tnames.add(tname)
+                    trajectories.add( (tname, xta) )
+                    project.queue(xta)
 
-   #####         #if xtasks:
-   #####         #    logger.info(formatline("TIMER Brain ext tasks queued {0:.5f}".format(time.time())))
-   #####         removals = list()
-   #####         for tname, xta in trajectories:
-   #####             if xta.state in {"fail","halted","success","cancelled"}:
-   #####                 removals.append( (tname, xta) )
+            #if xtasks:
+            #    logger.info(formatline("TIMER Brain ext tasks queued {0:.5f}".format(time.time())))
+            removals = list()
+            for tname, xta in trajectories:
+                if xta.state in {"fail","halted","success","cancelled"}:
+                    removals.append( (tname, xta) )
 
-   #####         for removal in removals:
-   #####             trajectories.remove(removal)
+            for removal in removals:
+                trajectories.remove(removal)
 
-   #####         if len(trajectories) == n_run and priorext < n_run:
-   #####             logger.info("Have full width of extensions")
-   #####             c.increment()
+            if len(trajectories) == n_run and priorext < n_run:
+                logger.info("Have full width of extensions")
+                c.increment()
 
-   #####         # setting this to look at next round
-   #####         priorext = len(trajectories)
+            # setting this to look at next round
+            priorext = len(trajectories)
 
-   #####         if len(trajectories) == 0:
-   #####             if lastcheck:
-   #####                 logger.info("Extensions last check")
-   #####                 lastcheck = False
-   #####                 time.sleep(15)
+            if len(trajectories) == 0:
+                if lastcheck:
+                    logger.info("Extensions last check")
+                    lastcheck = False
+                    time.sleep(15)
 
-   #####             else:
-   #####                 logger.info("Extensions are done")
-   #####                 #logger.info(formatline("TIMER Brain ext tasks done {0:.5f}".format(time.time())))
-   #####                 done = True
+                else:
+                    logger.info("Extensions are done")
+                    #logger.info(formatline("TIMER Brain ext tasks done {0:.5f}".format(time.time())))
+                    done = True
 
-   #####         else:
-   #####             if not lastcheck:
-   #####                 lastcheck = True
+            else:
+                if not lastcheck:
+                    lastcheck = True
 
-   #####             time.sleep(15)
+                time.sleep(15)
 
         logger.info("----------- Extension #{0}".format(c_ext))
 
