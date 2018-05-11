@@ -1,0 +1,4 @@
+
+new trajs method    new trajectory
+progress method     first task done
+length              10000

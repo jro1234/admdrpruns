@@ -3,9 +3,9 @@ pyyaml
 six
 ujson
 jsonschema
-cython==0.27.3
-numpy==1.13.3
-pandas==0.21.0
-pyemma==2.4
-mdtraj
 pymongo==3.5.1
+cython==0.27.3
+numpy
+pandas==0.21.0
+mdtraj
+pyemma

@@ -3,8 +3,16 @@
 
 wipeit=$1
 
+
+NSTEPS={n_steps}
+NTRAJ={length}
+MFREQ={all}
+PFREQ={prot}
+
 # Sort out some stuff
 RUNNAME={project_name}
+
+
 SCRIPT_NAME={strategy}
 ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
 # PERSISTENT DB IS ACCESSIBLE via my ssh_auth.py port
@@ -54,12 +62,12 @@ source $ADMDRP_ENV_ACTIVATE
 
 # Initialize the run
 #python $ADMD_SCRIPT $RUNNAME {system_name} --init_only --dblocation $DB_HOSTNAME -P {platform} -p {prot} -m {all}
-python $ADMD_SCRIPT $RUNNAME {system_name} --init_only -P {platform} -p {prot} -m {all}
+python $ADMD_SCRIPT $RUNNAME {system_name} --init_only -P {platform} -p $PFREQ -m $MFREQ
 
 # Execute the run
 which python
 #python $ADMD_SCRIPT $RUNNAME {system_name} --dblocation $DB_HOSTNAME {environment} {activate_prefix} {virtualenv} {longts} -t {threads} -l {length} -k {minlength} -N {n_traj} -b {n_rounds} -x {n_ext} {modeller} -p {prot} -m {all}
-python $ADMD_SCRIPT $RUNNAME {system_name} {environment} {activate_prefix} {virtualenv} {longts} -t {threads} -l {length} -k {minlength} -N {n_traj} -b {n_rounds} -x {n_ext} {modeller} -p {prot} -m {all}
+python $ADMD_SCRIPT $RUNNAME {system_name} {environment} {activate_prefix} {virtualenv} {longts} -t {threads} -l $NSTEPS  -N $NTRAJ -b {n_rounds} -x {n_ext} {modeller}
 
 deactivate
 

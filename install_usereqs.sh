@@ -91,12 +91,15 @@ FOLDER_ADMDRP=admdrp/
 FOLDER_ADMDRP_PKG=pkg/
 
 ADAPTIVEMD_PKG=jrossyra/adaptivemd.git
-ADAPTIVEMD_BRANCH=rp_integration
-RCT_DEDICATED_ADAPTIVEMD_BRANCH=project/adaptivemd
+ADAPTIVEMD_BRANCH=cancel_cus
+RCT_DEDICATED_ADAPTIVEMD_BRANCH=project/adaptivemd_gpu_am
+
 RUTILS_PKG=radical-cybertools/radical.utils.git
-RUTILS_BRANCH=$RCT_DEDICATED_ADAPTIVEMD_BRANCH
+RUTILS_BRANCH=project/adaptivemd
+
 SAGA_PKG=radical-cybertools/saga-python.git
-SAGA_BRANCH=$RCT_DEDICATED_ADAPTIVEMD_BRANCH
+SAGA_BRANCH=project/adaptivemd
+
 RPILOT_PKG=radical-cybertools/radical.pilot.git
 RPILOT_BRANCH=$RCT_DEDICATED_ADAPTIVEMD_BRANCH
 
@@ -112,7 +115,7 @@ OPENMM_PLUGIN_PREFIX=lib/plugins/
 OPENMM_INSTALL_LOC=$INSTALL_HOME$FOLDER_ADMDRP$FOLDER_ADMDRP_PKG/openmm/
 
 # Start Installation
-module load python
+module load python_anaconda
 virtualenv $INSTALL_HOME$FOLDER_ADMDRP_ENV
 installeroutput "Installing under this python:"
 installeroutput `which python`
@@ -149,12 +152,16 @@ then
   installeroutput "Appending library path with OpenMM libraries"
   echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$OPENMM_INSTALL_LOC$OPENMM_PLUGIN_PREFIX" >> ~/.bashrc
   echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$OPENMM_INSTALL_LOC$OPENMM_LIBRARY_PREFIX" >> ~/.bashrc
-  echo "#source \$ADMDRP_ENV_ACTIVATE" >> ~/.bashrc
+  echo "#source \$${ENV_BASE}_ENV_ACTIVATE" >> ~/.bashrc
   echo "# >> END OF WORKFLOW ENVIRONMENT VARIABLES   #" >> ~/.bashrc
   echo -e "##############################################\n\n" >> ~/.bashrc
 fi
 
+#ADMDRP_ENV_ACTIVATE=${${ENV_BASE}_ENV}bin/activate
+
 source ~/.bashrc
+echo "ENV ACTIVATE VARIABLE"
+echo $ADMDRP_ENV_ACTIVATE
 source $ADMDRP_ENV_ACTIVATE
 #eval source \$${ENV_BASE}_ENV_ACTIVATE
 installeroutput "Now have this virtualenv python:"

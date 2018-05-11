@@ -3,7 +3,9 @@
 
 from argparse import ArgumentParser
 
-stripper = lambda arg: arg.strip()
+#sleeptime = lambda arg: arg if arg == 'wait' else int(arg)
+stripper  = lambda arg: arg.strip()
+anyall    = lambda arg: arg if arg in {'any','all'} else 'any'
 
 def argparser():
 
@@ -49,6 +51,22 @@ def argparser():
     parser.add_argument("-t","--threads",
         help="Number of threads per task",
         type=int, default=1)
+
+    parser.add_argument("-c","--batchsize",
+        help="Number of tasks to queue simultaneously",
+        type=int, default=999999)
+
+    parser.add_argument("-u","--batchwait",
+        help="How to wait on queued batches of tasks, \"any\" or \"all\" if given",
+        default=False, type=anyall)
+
+    parser.add_argument("--progression",
+        help="Workflow task-completion progression criteria",
+        default="any", type=anyall)
+
+    parser.add_argument("-s","--batchsleep",
+        help="Time to sleep between task batches",
+        type=int, default=5)
 
     parser.add_argument("-e","--environment",
         help="Conda Environment for running tasks", type=stripper)

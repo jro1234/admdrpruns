@@ -154,6 +154,9 @@ if [ $INSTALL_DB = true ]; then
   which mongod
 fi
 
+
+#TODO some of these variables need to be moved to bashrc by default
+#      and away from the virtualenv activate script
 if [ $INSTALL_APP = true ]; then
   ################################################################################
   #  Install Env                                                                 #
@@ -163,6 +166,7 @@ if [ $INSTALL_APP = true ]; then
     cd $INSTALL_ENV
     virtualenv $INSTALL_ENV$FOLDER_ADMDRP_ENV
     echo "export ADMDRP_ENV=$INSTALL_ENV$FOLDER_ADMDRP_ENV" >> ~/.bashrc
+    echo "export ADMDRP_ENV_ADAPTIVEMD=\${ADMDRP_ENV}/lib/python2.7/site-package/adaptivemd/" >> ~/.bashrc
     echo "export ADMDRP_ENV_ACTIVATE=\${ADMDRP_ENV}bin/activate" >> ~/.bashrc
     echo -e "\n# MORE ENVIRONMENT VARIABLES" >> $INSTALL_ENV$FOLDER_ADMDRP_ENV/bin/activate
     if [ $RP_ENV_PRELOAD = true ]; then
