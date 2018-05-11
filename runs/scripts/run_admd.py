@@ -151,6 +151,9 @@ if __name__ == '__main__':
 
             logger.info(formatline("TIMER Project event adding {0:.5f}".format(time.time())))
 
+            # TODO consider having this function return resource_request parameters
+            #      when flagged, if we want to use RP client. And/Or can have a flag
+            #      that automatically requests the resource in the add_event function
             project.add_event(strategy_function(
                 project, engine, args.n_traj,
                 args.n_ext, args.length,
