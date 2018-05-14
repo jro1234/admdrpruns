@@ -19,6 +19,6 @@ ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
 python $ADMD_SCRIPT $RUNNAME ntl9 --reinit --init_only -P CPU -p $PFREQ -m $MFREQ
 
 # Execute the run
-python $ADMD_SCRIPT $RUNNAME ntl9  -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS  -w /lustre/atlas/proj-shared/bip149/jrossyra/admdrp/admdrpenv/bin/activate  -t 16 -l $NSTEPS -k $NSTEPS -N $NTRAJ -b 2 -x 1 -M pyemma-ionic
+python $ADMD_SCRIPT $RUNNAME ntl9  -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS  -w /lustre/atlas/proj-shared/bip149/jrossyra/admdrp/admdrpenv/bin/activate  -t 8 -l $NSTEPS -k $NSTEPS -N $NTRAJ -b 2 -x 1 -M pyemma-ionic
 
 deactivate

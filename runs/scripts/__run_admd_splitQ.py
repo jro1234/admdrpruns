@@ -177,24 +177,12 @@ def randlength(n, incr, length, lengthvariance=0.2):
     return [int(length*(1+r)/incr)*incr for r in rand]
 
 
-def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, openmm_threads=None, **kwargs):
+def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, task_env=None, **kwargs):
     if isinstance(task, list):
-        [add_task_env(ta, environment, activate_prefix, virtualenv, openmm_threads, **kwargs)
+        [add_task_env(ta, environment, activate_prefix, virtualenv, task_env, **kwargs)
          for ta in task]
     elif task:
         task.pre.append("echo \"CPU THREADS: ${OPENMM_CPU_THREADS}\"")
-        if environment:
-            task.add_conda_env(environment, activate_prefix)
-        if virtualenv:
-            task.pre.append('module load python')
-            task.add_virtualenv(virtualenv)
-        if openmm_threads:
-            if len(openmm_threads)==1:
-                task.setenv(*openmm_threads.items()[0])
-
-        if _loglevel.lower() == 'info':
-            task.pre.append("echo \"   >>>  TIMER Task start \"`date +%s.%3N`")
-            task.post.append("echo \"   >>>  TIMER Task stop \"`date +%s.%3N`")
 
         if 'pre' in kwargs:
             if isinstance(kwargs['pre'], str):
@@ -202,10 +190,26 @@ def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, 
 
             [task.pre.append(line) for line in kwargs['pre']]
 
+        if environment:
+            task.add_conda_env(environment, activate_prefix)
+
+        if virtualenv:
+            task.pre.append('echo $LD_LIBRARY_PATH')
+            task.add_virtualenv(virtualenv)
+            task.pre.append('which python')
+
+        if task_env:
+            for var,val in task_env.items():
+                task.setenv(var,val)
+
+        if _loglevel.lower() == 'info':
+            task.pre.append("echo \"   >>>  TIMER Task start \"`date +%s.%3N`")
+            task.post.append("echo \"   >>>  TIMER Task stop \"`date +%s.%3N`")
+
 
 def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None,
                                environment=None, activate_prefix=None, virtualenv=None,
-                               openmm_threads=None, resource_requirements=None, **kwargs):
+                               task_env=None, resource_requirements=None, **kwargs):
 
     if not trajectories:
         trajectories = project.trajectories
@@ -232,7 +236,7 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
     if n_run is not None and len(tasks) > n_run:
         tasks = tasks[:n_run]
 
-    add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads, kwargs)
+    add_task_env(tasks, environment, activate_prefix, virtualenv, task_env, kwargs)
 
     return tasks
 
@@ -253,6 +257,7 @@ def model_task(project, modeller, margs, trajectories=None,
     #kwargs.update({"est_exec_time": 7})
     mtask = modeller.execute(list(trajectories), **kwargs)
 
+    print(taskenv)
     add_task_env(mtask, **taskenv)
 
     project.queue(mtask)
@@ -278,11 +283,14 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                    continuing=True, minlength=None, randomly=False,
                    n_rounds=0, environment=None,
                    activate_prefix=None, virtualenv=None,
-                   cpu_threads=16, gpu_contexts=1, mpi_rank=0,
+                   cpu_threads=8, gpu_contexts=1, mpi_rank=0,
                    batchsize=999999, batchsleep=5, progression='any',
                    batchwait=False,
                    **kwargs):
 
+
+    virtualenv = ["$ADMDRP_ENV_ACTIVATE","deactivate"]
+    condaenv   = ["$CONDAACTIVATE admdenv","source $CONDAPATH/deactivate"]
 
     def printem(tasks, progressfunc):
         tasksstring = ''
@@ -302,22 +310,27 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
     logger.info(formatline("TIMER Brain enter {0:.5f}".format(time.time())))
 
-    taskenv = {'environment': environment,
+    taskenv = {'environment'    : environment,
                'activate_prefix': activate_prefix,
-               'virtualenv': virtualenv}
+               'virtualenv'     : virtualenv,
+               'pre'            : ['module unload python','module load python_anaconda']}
 
     logger.info("Got {0} for `cpu_threads`".format(cpu_threads))
-    openmm_threads = {'OPENMM_CPU_THREADS': cpu_threads}
+    task_env = {'OPENMM_CPU_THREADS'  : cpu_threads,
+                'OPENMM_CUDA_COMPILER': "`which nvcc`"}
+
     resource_name = project._current_configuration.resource_name
 
     gpu_load = 'module load cudatoolkit'
     gpu_find = 'OPENMM_CUDA_COMPILER=`which nvcc`'
-    gpu_cmds = [gpu_load, gpu_find]
+    gpu_cmds = [gpu_load, gpu_find, 'echo $OPENMM_CUDA_COMPILER']
+    #gpu_cmds = [gpu_load, 'echo $OPENMM_CUDA_COMPILER']
+    pre_cmds = gpu_cmds + ['module unload python', 'module unload python_anaconda']
 
     resource_requirements = {'resource_name': resource_name,
-                             'cpu_threads': cpu_threads,
-                             'gpu_contexts': gpu_contexts,
-                             'mpi_rank': mpi_rank}
+                             'cpu_threads'  : cpu_threads,
+                             'gpu_contexts' : gpu_contexts,
+                             'mpi_rank'     : mpi_rank}
 
     c = counter(n_rounds)
     tasks = list()
@@ -359,7 +372,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
          engine['pdb_file'], rb, engine).run(**resource_requirements))
          for rb in randbreak]
 
-        add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads, pre=gpu_cmds)
+        add_task_env(tasks, environment, activate_prefix, condaenv, task_env, pre=pre_cmds)
 
         logger.info(formatline("TIMER Brain first tasks queue {0:.5f}".format(time.time())))
         if not n_rounds or not c.done:
@@ -413,7 +426,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     logger.info("ENTERING task queuer")
                     #[tasks.append(t.run(export_path=export_path)) for t in trajectories]
                     [tasks.append(t.run(**resource_requirements)) for t in trajectories]
-                    add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads, pre=gpu_cmds)
+                    add_task_env(tasks, environment, activate_prefix, condaenv, task_env, pre=pre_cmds)
 
                     logger.info(formatline("TIMER Brain fresh tasks queue {0:.5f}".format(time.time())))
                     queue_tasks(project, tasks, sleeptime=batchsleep, batchsize=batchsize, wait=batchwait)
@@ -430,7 +443,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     logger.info("len(project.trajectories), n_run: {0} {1}".format(
                           len(project.trajectories), n_run))
 
-                    if notfirsttime or len(project.trajectories) >= n_run - len(filter(lambda ta: ta.state == 'cancelled', project.tasks)):
+                    if notfirsttime or len(project.trajectories) >= n_run - len(filter(lambda ta: ta.state in {'fail','cancelled'}, project.tasks)):
                         logger.info("adding first/next modeller task")
                         mtask = model_task(project, modeller, margs,
                             taskenv=taskenv,
@@ -477,7 +490,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 trajectories = [project.new_trajectory(engine['pdb_file'], urb, engine) for urb in unrandbreak]
 
                 [tasks.append(t.run(**resource_requirements)) for t in trajectories]
-                add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads, pre=gpu_cmds)
+                add_task_env(tasks, environment, activate_prefix, condaenv, task_env, pre=pre_cmds)
 
                 logger.info(formatline("TIMER Brain last tasks queue {0:.5f}".format(time.time())))
                 if not n_rounds or not c.done:
@@ -509,7 +522,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
                 if not n_rounds or not c.done:
                     [tasks.append(t.run(**resource_requirements)) for t in trajectories]
-                    add_task_env(tasks, environment, activate_prefix, virtualenv, openmm_threads, pre=gpu_cmds)
+                    add_task_env(tasks, environment, activate_prefix, condaenv, task_env, pre=pre_cmds)
                     logger.info(formatline("TIMER Brain new tasks queue {0:.5f}".format(time.time())))
 
                     queue_tasks(project, tasks, sleeptime=batchsleep, batchsize=batchsize, wait=batchwait)
@@ -609,7 +622,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
    #####             xtasks = check_trajectory_minlength(project, minlength,
    #####                 n_steps, n_run, environment=environment,
    #####                 activate_prefix=activate_prefix, virtualenv=virtualenv,
-   #####                 openmm_threads=openmm_threads, resource_requirements=resource_requirements)
+   #####                 task_env=task_env, resource_requirements=resource_requirements)
 
    #####         tnames = set()
    #####         if len(trajectories) > 0:
