@@ -66,8 +66,8 @@ if __name__ == "__main__":
                 strategy     = args.strategy,
                 #dblocation   = args.dblocation,
                 platform     = args.platform,
+                reinit       = '--reinit' if args.reinitialize else '',
                 environment  = '-e '+args.environment if args.environment else '',
-                activate_prefix = '-A '+args.activate_prefix if args.activate_prefix else '',
                 virtualenv   = '-w '+args.virtualenv if args.virtualenv else '',
                 n_rounds     = args.n_rounds,
                 minlength    = args.minlength if args.minlength > args.length else args.length,
@@ -77,7 +77,9 @@ if __name__ == "__main__":
                 threads      = args.threads,
                 prot         = args.prot if not args.longts else args.prot * 2 / 5,
                 all          = args.all if not args.longts else args.all * 2 / 5,
-                length       = args.length,))
+                n_steps      = args.length,
+                activate_prefix = '-A '+args.activate_prefix if args.activate_prefix else '',
+            ))
 
     else:
         print("\nExiting runmaker script\nA run already exists in folder called:\n", run_folder)
