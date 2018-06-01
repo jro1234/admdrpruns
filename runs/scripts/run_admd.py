@@ -21,7 +21,7 @@
 
 # Import custom adaptivemd init & strategy functions
 from _argparser import argparser
-from __run_admd_splitQ import init_project, strategy_function, get_logger, formatline
+from __run_admd import init_project, strategy_function, get_logger, formatline
 
 #dump_finalize_timestamps = False
 dump_finalize_timestamps = True
