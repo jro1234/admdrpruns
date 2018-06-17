@@ -1,16 +1,23 @@
 #!/bin/bash
 
 
+# TODO - check if conda in path already
+#      - match only exact env names
+#      - get args from parent installer
+#
 # del #module load python
 CWD=`pwd`
 
-INSTALL_CONDA=$PROJWORK/bip149/$USER/
+PROJFOLDER=bip161
+INSTALL_CONDA=$PROJWORK/$PROJFOLDER/$USER/
 CONDA_ENV_NAME=admdenv
 CONDA_ENV_PYTHON=2.7
 CONDA_VERSION=2
 CONDA_PKG_VERSION=
 OPENMM_VERSION=7.0
-ADMD_TASK_PKG="openmm=$OPENMM_VERSION mdtraj"
+ADMD_TASK_PKG="openmm=$OPENMM_VERSION mdtraj pyemma==2.4"
+
+
 if [ -z ${TASKCONDAPATH+x} ]; then
   cd $INSTALL_CONDA
   curl -O https://repo.continuum.io/miniconda/Miniconda$CONDA_VERSION-latest-Linux-x86_64.sh
@@ -25,7 +32,9 @@ if [ -z ${TASKCONDAPATH+x} ]; then
   conda install conda=$CONDA_PKG_VERSION
   rm Miniconda$CONDA_VERSION-latest-Linux-x86_64.sh
 fi
+
 which conda
+
 if [[ ! -z "$CONDA_ENV_NAME" ]]; then
   ENVS=`$TASKCONDAPATH/conda env list`
   if ! echo "$ENVS" | grep -q "$CONDA_ENV_NAME"; then
@@ -35,6 +44,7 @@ if [[ ! -z "$CONDA_ENV_NAME" ]]; then
   fi
   source $TASKCONDAPATH/activate $CONDA_ENV_NAME
 fi
+
 echo "Installing these Packages in AdaptiveMD Task Layer"
 echo $ADMD_TASK_PKG
 conda install $ADMD_TASK_PKG

@@ -52,3 +52,11 @@ Usage:
 
 python runmaker.py testrun ntl9 -w $ADMDRP_ENV_ACTIVATE -P CPU -M pyemma-ionic -N 5 -x 1 -b 1 -l 100 -k 200 -p 2 -m 10
 
+
+# SOMEDAY TITAN will stop changing
+python runmaker.py testrun ntl9 -A $TASKCONDAPATH -e admdenv -P CPU -M pyemma-ionic -t 8 -N 5 -x 1 -b 1 -l 100 -k 200 -p 2 -m 10
+
+python runmaker.py testrun lignin -A $TASKCONDAPATH -e admdenv -P CPU -M pyemma-ionic -t 8 -N 5 -x 1 -b 1 -l 100000 -k 100000 -p 2000 -m 10000
+
+
+

@@ -46,7 +46,7 @@ final_states = Task.FINAL_STATES + Task.RESTARTABLE_STATES
 task_done = lambda ta: ta.state in final_states
 
 
-def calculate_request(size_workload, n_workloads, n_steps, steprate=200):
+def calculate_request(size_workload, n_workloads, n_steps, steprate=12000):
     '''
     Calculate the parameters for resource request done by RP.
     The workload to execute will be assessed to estimate these
@@ -89,7 +89,7 @@ def calculate_request(size_workload, n_workloads, n_steps, steprate=200):
 
     # 5 minutes padding for initialization & such
     # as the minimum walltime
-    wallminutes = 5 + int(float(n_steps) * n_workloads / steprate)
+    wallminutes = 10 + int(float(n_steps) * n_workloads / steprate)
     return cpus, nodes, wallminutes, gpus 
 
 

@@ -13,6 +13,8 @@ function installeroutput {
 
 CWD=`pwd`
 
+PROJFOLDER=bip161
+
 ###############################################################################
 #  Install MongoDB                                                            #
 #   - this is treated as a different unit than the Python-based               #
@@ -21,7 +23,7 @@ CWD=`pwd`
 #     the other workflow software                                             #
 ###############################################################################
 # these ones saved to environment variables
-INSTALL_ADMD_DB=$PROJWORK/bip149/$USER/
+INSTALL_ADMD_DB=$PROJWORK/$PROJFOLDER/$USER/
 # Folder names for our installed components
 FOLDER_ADMD_DB=mongodb
 MONGODB_VERSION=3.3.0
@@ -80,12 +82,13 @@ cd $CWD
 # Turn this off to prevent env copies
 # appended to bashrc with reinstalls
 ADD_ENVIRONMENT=True
+INSTALL_TASKENV=False
 
 # Configuring the installation
-ENV_BASE=ADMDRP
+ENV_BASE=ADMDRP_LIG
 ENV_HOME=`echo $ENV_BASE | tr '[:upper:]' '[:lower:]'`
 
-INSTALL_HOME=$PROJWORK/bip149/$USER/$ENV_HOME/
+INSTALL_HOME=$PROJWORK/$PROJFOLDER/$USER/$ENV_HOME/
 FOLDER_ADMDRP_ENV=admdrpenv/
 FOLDER_ADMDRP=admdrp/
 FOLDER_ADMDRP_PKG=pkg/
@@ -108,17 +111,25 @@ RPILOT_BRANCH=$RCT_DEDICATED_ADAPTIVEMD_BRANCH
 # are located on the filesystem.
 # This one came from:
 #https://simtk.org/frs/download_confirm.php/file/4904/OpenMM-7.0.1-Linux.zip?group_id=161
-OPENMM_LOC=$PROJWORK/bip149/$USER/
+OPENMM_LOC=$PROJWORK/$PROJFOLDER/$USER/
 FOLDER_OPENMM=OpenMM-7.0.1-Linux
 OPENMM_LIBRARY_PREFIX=lib/
 OPENMM_PLUGIN_PREFIX=lib/plugins/
 OPENMM_INSTALL_LOC=$INSTALL_HOME$FOLDER_ADMDRP$FOLDER_ADMDRP_PKG/openmm/
 
 # Start Installation
-module load python_anaconda
+module load python
+#module load python_anaconda
 virtualenv $INSTALL_HOME$FOLDER_ADMDRP_ENV
 installeroutput "Installing under this python:"
 installeroutput `which python`
+
+# INSTALLING TASKENV
+if [ $INSTALL_TASKENV = True ]
+then
+  ./install_taskenv.sh
+fi
+
 
 if [ $ADD_ENVIRONMENT = True ]
 then
@@ -131,7 +142,7 @@ then
   echo "# >> START OF WORKFLOW ENVIRONMENT VARIABLES #" >> ~/.bashrc
   echo "# This is home to the execution working directories" >> $RP_VARSLOC
   echo "# ie the Radical Pilot Sandbox" >> $RP_VARSLOC
-  echo "export RADICAL_SANDBOX=$MEMBERWORK/bip149/radical.pilot.sandbox/" >> $RP_VARSLOC
+  echo "export RADICAL_SANDBOX=$MEMBERWORK/$PROJFOLDER/radical.pilot.sandbox/" >> $RP_VARSLOC
   echo "#ENVIRONMENT VARIABLES to Workflow control output" >> $RP_VARSLOC
   echo "#export RADICAL_PILOT_PROFILE=\"True\"" >> $RP_VARSLOC
   echo "#export RADICAL_PROFILE=\"True\"" >> $RP_VARSLOC
@@ -160,10 +171,9 @@ fi
 #ADMDRP_ENV_ACTIVATE=${${ENV_BASE}_ENV}bin/activate
 
 source ~/.bashrc
-echo "ENV ACTIVATE VARIABLE"
-echo $ADMDRP_ENV_ACTIVATE
-source $ADMDRP_ENV_ACTIVATE
-#eval source \$${ENV_BASE}_ENV_ACTIVATE
+#del#echo "ENV ACTIVATE VARIABLE"
+#del#echo \$${ENV_BASE}_ENV_ACTIVATE
+eval source \$${ENV_BASE}_ENV_ACTIVATE
 installeroutput "Now have this virtualenv python:"
 installeroutput `which python`
 
@@ -228,7 +238,7 @@ expect -c "
 
 installeroutput "FOR YOUR WORKFLOW TO RUN PROPERLY, UNCOMMENT THIS"
 installeroutput "LINE IN YOUR .bashrc FILE"
-installeroutput "source \$ADMDRP_ENV_ACTIVATE"
+installeroutput "source \$${ENV_BASE}_ACTIVATE"
 
 cd $CWD
 
