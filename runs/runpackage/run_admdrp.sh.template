@@ -1,19 +1,25 @@
 #!/bin/bash
 
 
-# TODO look at admdjobs and move all args
-#      up to the bash level, and port to
-#      python arguments (tricky with ones
-#      that need option specification)
+# What kind of workflow to run?
+workflow=$1
+#workflow=model
+#workflow=trajs
+#workflow=all
+#workflow=cleanup
 
-# TODO include these additional workflow
-#      layout parameters as adjustable
+if [ -z "$workflow" ]; then
+  echo "Must provide a workflow argument:"
+  echo "  - \"model\", \"trajs\", \"all\",\"cleanup\""
+fi
+
 BATCHSLEEP=5
 BATCHSIZE=500
 BATCHWAIT=any
 PROGRESS=any
 # Workflow Parameters
 NTRAJ={n_traj}
+NROUNDS={n_rounds}
 NSTEPS={n_steps}
 REINIT={reinit}
 
@@ -36,5 +42,48 @@ ADMD_SCRIPT=${{ADMDRP_RUNS}}/scripts/$SCRIPT_NAME
 python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME $REINIT --init_only -P $PLATFORM -p $PFREQ -m $MFREQ
 
 # Execute the run
-python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N $NTRAJ -b {n_rounds} -x {n_ext} {modeller}
+python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N $NTRAJ -b $NROUNDS -x {n_ext} {modeller}
 
+
+#--------------------------#
+#---   Execute the run  ---#
+#--------------------------#
+echo -e "\n\nExecuting this workflow run line"
+
+# CLEANUP
+if [[ $workflow = "cleanup" ]]; then
+  echo -e "\n\n   ---   CLEANUP PREVIOUS TASKS   ---   "
+  echo "python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N 0 -b $NROUNDS -x {n_ext}"
+  echo -e "\n"
+  python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N 0 -b $NROUNDS -x {n_ext}
+  #python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS -w $ADMDRP_ENV_ACTIVATE  $LONGTS -t 14 -l $NSTEPS  -N 0 -b 1 -x 1
+
+# ONLY TRAJS
+elif [[ $workflow = "trajs" ]]; then
+  echo -e "\n   ---   ONLY TRAJS   ---   "
+  echo "python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N $NTRAJ -b $NROUNDS -x {n_ext}"
+  echo -e "\n\n"
+  python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N $NTRAJ -b $NROUNDS -x {n_ext}
+  #python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS -w $ADMDRP_ENV_ACTIVATE  $LONGTS -t 14 -l $NSTEPS  -N $NTRAJ -b 1 -x 1
+
+# ONLY MODEL
+elif [[ $workflow = "model" ]]; then
+  echo -e "\n\n   ---   ONLY MODEL   ---   "
+  echo "python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N 0 -b $NROUNDS -x {n_ext} {modeller}"
+  echo -e "\n"
+  python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N 0 -b $NROUNDS -x {n_ext} {modeller}
+  #python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS -w $ADMDRP_ENV_ACTIVATE  $LONGTS -t 14 -l $NSTEPS  -N 0 -b 1 -x 1 -M pyemma-invca
+
+# MODEL & TRAJS
+elif [[ $workflow = "all" ]]; then
+  echo -e "\n\n   ---   TRAJS & MODEL   ---   "
+  echo "python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N $NTRAJ -b $NROUNDS -x {n_ext} {modeller}"
+  echo -e "\n"
+  python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS {environment} {activate_prefix} {virtualenv} $LONGTS -t {threads} -l $NSTEPS  -N $NTRAJ -b $NROUNDS -x {n_ext} {modeller}
+  #python $ADMD_SCRIPT $RUNNAME $SYSTEMNAME -s $BATCHSLEEP -c $BATCHSIZE -u $BATCHWAIT --progress $PROGRESS -w $ADMDRP_ENV_ACTIVATE  $LONGTS -t 14 -l $NSTEPS  -N $NTRAJ -b 1 -x 1 -M pyemma-invca
+
+else
+  echo "Need 1 argument, choice of 'model','trajs','all'"
+  echo "Recieved argument: $workflow"
+
+fi

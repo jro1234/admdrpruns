@@ -9,73 +9,21 @@ and project initializing function 'init_project'.
 from __future__ import print_function
 from adaptivemd.scheduler import Scheduler
 from adaptivemd import PythonTask
+from adaptivemd.util import parse_cfg_file
 from pprint import pformat
+import math
 import uuid
 import time
 import os, sys
 
+from __run_tools import get_logger, formatline
+logger = get_logger(__name__)
+
+import sampling_interface
+
 
 # TODO FIXME MODELLER waiting is only on first non-first round
 #            ie when c_ext == 1
-
-# This is used outside of logger context
-# for timestamping in task descriptions
-_loglevel = os.environ.get('ADMD_PROFILE')
-
-prefixline = '    >>>   '
-formatline = lambda l: '\n'.join(
-    [prefixline+ls if ls else '' for ls in l.split('\n')] +
-    ( [''] if len(l.split('\n'))>1 else [])
-    )
-
-def get_logger(logname, logfile=None):
-
-    import logging
-
-    try:
-        if _loglevel.lower() == 'info':
-            loglevel = logging.INFO
-        elif _loglevel.lower() == 'debug':
-            loglevel = logging.DEBUG
-        elif _loglevel.lower() == 'warning':
-            loglevel = logging.WARNING
-        elif _loglevel.lower() == 'error':
-            loglevel = logging.ERROR
-        # catch attempted set values as WARNING level
-        elif hasattr(_loglevel, 'lower'):
-            loglevel = logging.WARNING
-    # catch None's for not set
-    except:
-        loglevel = logging.WARNING
-
-    if not logfile:
-        logfile = 'run_admdrp.' + logname + '.log'
-
-    formatter = logging.Formatter(
-        '%(asctime)s ::::: %(name)s ::::: %(levelname)s |||||   %(message)s'
-        )
-
-    logging.basicConfig(level=loglevel)#, format=formatter)
-    logger = logging.getLogger(logname)
-
-    ch = logging.StreamHandler()
-    #ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.INFO)
-    ch.setFormatter(formatter)
-
-    fh = logging.FileHandler(logfile)
-    fh.setLevel(logging.INFO)
-    fh.setFormatter(formatter)
-
-    logger.addHandler(ch)
-    logger.addHandler(fh)
-
-    logger.propagate = False
-
-    return logger
-
-
-logger = get_logger(__name__)
 
 
 
@@ -124,7 +72,12 @@ def pythontask_callback(pythontask, scheduler):
           '$ADMDRP_DATA/projects/{}/'.format(scheduler.project.name))
     )
 
-    pythontask._cb_success(scheduler, outpath)
+    #print(pythontask.__dict__['post'])
+    try:
+        pythontask._cb_success(scheduler, outpath)
+    except Exception as e:
+        logger.error("Recieved Error from callback: {}".format(e))
+        setattr(pythontask,'state','fail')
 
 
 def get_dbentry(project, obj, store):
@@ -206,11 +159,11 @@ def add_task_env(task, environment=None, activate_prefix=None, virtualenv=None, 
             if isinstance(kwargs['pre'], str):
                 kwargs['pre'] = [kwargs['pre']]
 
-            [task.pre.insert(0,line) for line in kwargs['pre']]
+            if isinstance(kwargs['pre'], list):
+                [task.pre.insert(0,line) for line in reversed(kwargs['pre'])]
 
-        if _loglevel.lower() == 'info':
-            task.pre.append("echo \"   >>>  TIMER Task start \"`date +%s.%3N`")
-            task.post.append("echo \"   >>>  TIMER Task stop \"`date +%s.%3N`")
+        task.pre.append("echo \"   >>>  TIMER Task start \"`date +%s.%3N`")
+        task.post.append("echo \"   >>>  TIMER Task stop \"`date +%s.%3N`")
 
 
 def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, trajectories=None,
@@ -242,7 +195,7 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
     if n_run is not None and len(tasks) > n_run:
         tasks = tasks[:n_run]
 
-    add_task_env(tasks, environment, activate_prefix, virtualenv, task_env, kwargs)
+    add_task_env(tasks, **task_env)#environment, activate_prefix, virtualenv, task_env, kwargs)
 
     return tasks
 
@@ -250,6 +203,8 @@ def check_trajectory_minlength(project, minlength, n_steps=None, n_run=None, tra
 def model_task(project, modeller, margs, trajectories=None,
                resource_requirements=None, taskenv=None):
 
+    if not modeller:
+        return []
     # model task goes last to ensure (on first one) that the
     # previous round of trajectories is done
     #print("Using these in the model:\n", list(project.trajectories))
@@ -263,7 +218,15 @@ def model_task(project, modeller, margs, trajectories=None,
     #kwargs.update({"est_exec_time": 7})
     mtask = modeller.execute(list(trajectories), **kwargs)
 
-    print(taskenv)
+   ## taskenv = {
+   ##            'environment'    : 'admdenv',#environment,
+   ##            'activate_prefix': '$TASKCONDAPATH',#activate_prefix,
+   ##            'virtualenv'     : None,#virtualenv,
+   ##            'task_env'       : None,#task_env,
+   ##            'pre'            : None,#pre_cmds,
+   ##           }
+
+    print("TASKENV for MODELLER: ", taskenv)
     add_task_env(mtask, **taskenv)
 
     project.queue(mtask)
@@ -272,7 +235,7 @@ def model_task(project, modeller, margs, trajectories=None,
     logger.info(formatline("\nModeller Main-task:\n" + pformat(mtask.main)))
     logger.info(formatline("\nModeller Post-task:\n" + pformat(mtask.post)))
 
-    return mtask
+    return [mtask]
 
 
 
@@ -291,9 +254,11 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                    activate_prefix=None, virtualenv=None,
                    cpu_threads=8, gpu_contexts=1, mpi_rank=0,
                    batchsize=999999, batchsleep=5, progression='any',
-                   batchwait=False,
+                   batchwait=False, read_margs=True, sampling_method='explore_macrostates',
+                   sfkwargs=dict(),
                    **kwargs):
 
+    sampling_function = sampling_interface.get_one(sampling_method, **sfkwargs)
 
     #virtualenv = ["$ADMDRP_ENV_ACTIVATE","deactivate"]
     #condaenv   = ["$TASKCONDAPATH admdenv","source $TASKCONDAPATH/deactivate"]
@@ -319,6 +284,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
     task_env = {'OPENMM_CPU_THREADS'  : cpu_threads,
                 'OPENMM_CUDA_COMPILER': "`which nvcc`"}
 
+    #gpu_load = 'module load cudatoolkit/7.5.18-1.0502.10743.2.1'
     gpu_load = 'module load cudatoolkit'
     gpu_find = 'export OPENMM_CUDA_COMPILER=`which nvcc`'
     gpu_cmds = [gpu_load, gpu_find, 'echo $OPENMM_CUDA_COMPILER']
@@ -426,7 +392,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     lengtharg = n_steps
 
                 #trajectories = [project.new_trajectory(engine['pdb_file'], lengtharg, engine) for _ in range(n_run)]
-                trajectories = project.new_ml_trajectory(engine, lengtharg, n_run)
+                #trajectories = project.new_ml_trajectory(engine, lengtharg, n_run)
+                trajectories = sampling_function(project, engine, lengtharg, n_run)
 
                 logger.info(formatline("TIMER Brain fresh tasks define {0:.5f}".format(time.time())))
                 logger.info(formatline("TIMER Brain fresh tasks defined {0:.5f}".format(time.time())))
@@ -461,7 +428,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
     
                         logger.info(formatline("\nQueued Modelling Task\nUsing these modeller arguments:\n" + pformat(margs)))
 
-                        tasks.append(mtask)
+                        tasks.extend(mtask)
                         waiting = False
                     else:
                         time.sleep(3)
@@ -476,17 +443,18 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
 
         # LAST workload in this execution
         elif c_ext == n_ext:
-            if len(tasks) < n_run and mtask.is_done():
+            if len(tasks) < n_run:
+                if mtask:
                 # breaking convention of mtask last
                 # is OK because not looking for mtask
                 # after last round, only task.done
-                if continuing:
-                    mtask = model_task(project, modeller, margs,
-                            taskenv=taskenv,
-                            resource_requirements=resource_requirements)
+                    if mtask.is_done() and continuing:
+                        mtask = model_task(project, modeller, margs,
+                                taskenv=taskenv,
+                                resource_requirements=resource_requirements)
 
-                    tasks.append(mtask)
-                    logger.info(formatline("\nQueued Modelling Task\nUsing these modeller arguments:\n" + pformat(margs)))
+                        tasks.extend(mtask)
+                        logger.info(formatline("\nQueued Modelling Task\nUsing these modeller arguments:\n" + pformat(margs)))
                     
                 logger.info(formatline("TIMER Brain last tasks define {0:.5f}".format(time.time())))
                 logger.info("Queueing final extensions after modelling done")
@@ -496,7 +464,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 unrandbreak.reverse()
                 logger.info(formatline("\nFinal MD Task Lengths: \n".format(unrandbreak)))
 
-                trajectories = project.new_ml_trajectory(engine, unrandbreak, n_run)
+                trajectories = sampling_function(project, engine, unrandbreak, n_run)
+                #trajectories = project.new_ml_trajectory(engine, unrandbreak, n_run)
                 #trajectories = [project.new_trajectory(engine['pdb_file'], urb, engine) for urb in unrandbreak]
 
                 [tasks.append(t.run(**resource_requirements)) for t in trajectories]
@@ -506,6 +475,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 logger.info(formatline("TIMER Brain last tasks queue {0:.5f}".format(time.time())))
                 if not n_rounds or not c.done:
 
+                    print("Queueing these: ")
+                    print(tasks)
                     queue_tasks(project, tasks, sleeptime=batchsleep, batchsize=batchsize, wait=batchwait)
 
                     c.increment()
@@ -528,7 +499,8 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                 logger.info("Queueing new round of modelled trajectories")
                 logger.info(formatline("TIMER Brain new tasks define {0:.5f}".format(time.time())))
 
-                trajectories = project.new_ml_trajectory(engine, n_steps, n_run)
+                trajectories = sampling_function(project, engine, n_steps, n_run)
+                #trajectories = project.new_ml_trajectory(engine, n_steps, n_run)
                 #trajectories = [project.new_trajectory(engine['pdb_file'], n_steps, engine) for _ in range(n_run)]
 
                 if not n_rounds or not c.done:
@@ -542,12 +514,13 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     c.increment()
                     logger.info(formatline("TIMER Brain new tasks queued {0:.5f}".format(time.time())))
 
-                if mtask.is_done():
-                    mtask = model_task(project, modeller, margs,
-                            taskenv=taskenv,
-                            resource_requirements=resource_requirements)
+                    if mtask:
+                        if mtask.is_done():
+                            mtask = model_task(project, modeller, margs,
+                                    taskenv=taskenv,
+                                    resource_requirements=resource_requirements)
 
-                    tasks.append(mtask)
+                            tasks.extend(mtask)
 
                     return lambda: progress(tasks)
                     #return any([ta.is_done() for ta in tasks[:-1]])
@@ -570,39 +543,62 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
     mtask = None
     frac_ext_final_margs = 0.75
 
-    #start_margs = dict(tica_stride=10, tica_lag=50, tica_dim=4,
-    #    clust_stride=10, msm_states=50, msm_lag=5)
-     
-    #final_margs = dict(tica_stride=10, tica_lag=50, tica_dim=6,
-    #    clust_stride=10, msm_states=100, msm_lag=5)
+    if not read_margs:
+        start_margs = dict(tica_stride=2, tica_lag=20, tica_dim=2,
+            clust_stride=1, msm_states=50, msm_lag=20)
 
-    start_margs = dict(tica_stride=2, tica_lag=20, tica_dim=2,
-        clust_stride=1, msm_states=50, msm_lag=20)
+        final_margs = dict(tica_stride=2, tica_lag=20, tica_dim=2,
+            clust_stride=1, msm_states=50, msm_lag=20)
 
-    final_margs = dict(tica_stride=2, tica_lag=20, tica_dim=2,
-        clust_stride=1, msm_states=50, msm_lag=20)
+        def update_margs():
+            margs=dict()
+            progress = c_ext/float(n_ext)
 
-    def update_margs():
-        margs=dict()
-        progress = c_ext/float(n_ext)
-
-        if c_ext == 1:
-            progress_margs = 0
-        elif progress < frac_ext_final_margs:
-            progress_margs = progress/frac_ext_final_margs
-        else:
-            progress_margs = 1
-
-        for key,baseval in start_margs.items():
-            if key in final_margs:
-                finalval = final_margs[key]
-                val = int( progress_margs*(finalval-baseval) + baseval )
+            if c_ext == 1:
+                progress_margs = 0
+            elif progress < frac_ext_final_margs:
+                progress_margs = progress/frac_ext_final_margs
             else:
-                val = baseval
+                progress_margs = 1
 
-            margs.update({key: val})
+            for key,baseval in start_margs.items():
+                if key in final_margs:
+                    finalval = final_margs[key]
+                    val = int( progress_margs*(finalval-baseval) + baseval )
+                else:
+                    val = baseval
 
-        return margs
+                margs.update({key: val})
+
+            return margs
+
+    else:
+        _margs = parse_cfg_file('margs.cfg')
+
+        def update_margs():
+            margs    = dict()
+            # How many rounds are done?
+
+            for k,v in _margs[project.name].items():
+                if isinstance(v,list):
+                    progress = math.ceil(len(project.trajectories)/float(n_run))
+                    for u in v:
+                        # u is a 2-tuple
+                        #  already prepped as ints
+                        if progress >= u[1]:
+                            margs[k] = u[0]
+                        else:
+                            if k not in margs:
+                                margs[k] = u[0]
+                            break
+                else:
+                    # FIXME not good here, braoder solution to typing: typetemplate
+                    try:
+                        margs[k] = int(v)
+                    except ValueError:
+                        margs[k] = v
+
+            return margs
 
     # this will be used to update the models
     # into database after `mtask` completion
@@ -624,65 +620,66 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         priorext = 0
         # TODO fix, this isn't a consistent name "trajectories"
         trajectories = set()
-   #####     while not done and ( not n_rounds or not c.done ):
+        while not done and ( not n_rounds or not c.done ):
 
-   #####         #print("looking for too-short trajectories")
-   #####         if c.done:
-   #####             xtasks = list()
-   #####         else:
-   #####             #logger.info(formatline("TIMER Brain ext tasks define {0:.5f}".format(time.time())))
-   #####             xtasks = check_trajectory_minlength(project, minlength,
-   #####                 n_steps, n_run, environment=environment,
-   #####                 activate_prefix=activate_prefix, virtualenv=virtualenv,
-   #####                 task_env=task_env, resource_requirements=resource_requirements)
+            #print("looking for too-short trajectories")
+            if c.done:
+                xtasks = list()
+            else:
+                #logger.info(formatline("TIMER Brain ext tasks define {0:.5f}".format(time.time())))
+                xtasks = check_trajectory_minlength(project, minlength,
+                    n_steps, n_run, resource_requirements=resource_requirements, task_env=taskenv)
+                   # environment=environment,
+                   # activate_prefix=activate_prefix, virtualenv=virtualenv,
+                   # task_env=task_env, resource_requirements=resource_requirements)
 
-   #####         tnames = set()
-   #####         if len(trajectories) > 0:
-   #####             [tnames.add(_) for _ in set(zip(*trajectories)[0])]
+            tnames = set()
+            if len(trajectories) > 0:
+                [tnames.add(_) for _ in set(zip(*trajectories)[0])]
 
-   #####         #if xtasks:
-   #####         #    logger.info(formatline("TIMER Brain ext tasks queue {0:.5f}".format(time.time())))
-   #####         for xta in xtasks:
-   #####             tname = xta.trajectory.basename
+            #if xtasks:
+            #    logger.info(formatline("TIMER Brain ext tasks queue {0:.5f}".format(time.time())))
+            for xta in xtasks:
+                tname = xta.trajectory.basename
 
-   #####             if tname not in tnames:
-   #####                 tnames.add(tname)
-   #####                 trajectories.add( (tname, xta) )
-   #####                 project.queue(xta)
+                if tname not in tnames:
+                    tnames.add(tname)
+                    trajectories.add( (tname, xta) )
+                    project.queue(xta)
 
-   #####         #if xtasks:
-   #####         #    logger.info(formatline("TIMER Brain ext tasks queued {0:.5f}".format(time.time())))
-   #####         removals = list()
-   #####         for tname, xta in trajectories:
-   #####             if xta.state in {"fail","halted","success","cancelled"}:
-   #####                 removals.append( (tname, xta) )
+            #if xtasks:
+            #    logger.info(formatline("TIMER Brain ext tasks queued {0:.5f}".format(time.time())))
+            removals = list()
+            for tname, xta in trajectories:
+                if xta.state in {"fail","halted","success","cancelled"}:
+                    removals.append( (tname, xta) )
 
-   #####         for removal in removals:
-   #####             trajectories.remove(removal)
+            for removal in removals:
+                trajectories.remove(removal)
 
-   #####         if len(trajectories) == n_run and priorext < n_run:
-   #####             logger.info("Have full width of extensions")
-   #####             c.increment()
+            if len(trajectories) == n_run and priorext < n_run:
+                logger.info("Have full width of extensions")
+                c.increment()
 
-   #####         # setting this to look at next round
-   #####         priorext = len(trajectories)
+            # setting this to look at next round
+            priorext = len(trajectories)
 
-   #####         if len(trajectories) == 0:
-   #####             if lastcheck:
-   #####                 logger.info("Extensions last check")
-   #####                 lastcheck = False
-   #####                 time.sleep(15)
+            if len(trajectories) == 0:
+                if lastcheck:
+                    logger.info("Extensions last check")
+                    lastcheck = False
+                    time.sleep(15)
 
-   #####             else:
-   #####                 logger.info("Extensions are done")
-   #####                 #logger.info(formatline("TIMER Brain ext tasks done {0:.5f}".format(time.time())))
-   #####                 done = True
+                else:
+                    logger.info("Extensions are done")
+                    #logger.info(formatline("TIMER Brain ext tasks done {0:.5f}".format(time.time())))
+                    done = True
 
-   #####         else:
-   #####             if not lastcheck:
-   #####                 lastcheck = True
+            else:
+                if not lastcheck:
+                    lastcheck = True
 
-   #####             time.sleep(15)
+                time.sleep(15)
 
         logger.info("----------- Extension #{0}".format(c_ext))
 
@@ -690,11 +687,17 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
         # to use check_trajectory_minlength above
         if c_ext < n_ext and not c.done:
             logger.info(formatline("TIMER Brain main loop enter {0:.5f}".format(time.time())))
-            if modeller:
+            tasks = list()
+            if not modeller:
+                c_ext += 1
+                logger.info("Extending project without modeller")
+                yield lambda: model_extend(modeller, randbreak, c=c)
+                logger.info(formatline("TIMER Brain main no modeller done {0:.5f}".format(time.time())))
+            else:
                 margs = update_margs()
 
                 logger.info("Extending project with modeller")
-                tasks = list()
+                logger.info("margs for this round will be: {}".format(pformat(margs)))
 
                 if mtask is None:
 
@@ -739,9 +742,6 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     logger.info("Not sure how we got here")
                     pass
 
-            # don't currently have a modeller-less workload function
-            else:
-                pass
 
         # End of CONTROL LOOP
         # need to increment c_ext to exit the loop
@@ -789,7 +789,7 @@ def strategy_function(project, engine, n_run, n_ext, n_steps,
                     #mtask = None
 
             else:
-                logger.info("Waiting on mtask first")
+                logger.info("Waiting on mtask first: {0}.state ~ {1}".format(mtask, mtask.state))
                 time.sleep(idle_time)
                 return False
 
@@ -944,6 +944,8 @@ def init_project(p_name, sys_name, m_freq, p_freq,
 
         all_features = [ca_features, ionic_features]
 
+        inv_ca_features = {'add_inverse_distances': {'select_Ca': None}}
+
         #ok#ionic_modeller = {'add_distances': {'select':
         #ok#                                   ['rescode K or rescode R or rescode H']},
         #ok#                  'kwargs': {'indices2': {'select':
@@ -960,10 +962,18 @@ def init_project(p_name, sys_name, m_freq, p_freq,
         all_modeller_5 = PyEMMAAnalysis(engine_5, 'protein', all_features
                                  ).named('pyemma-ionic-5')
 
+        inv_modeller_2 = PyEMMAAnalysis(engine_2, 'protein', inv_ca_features
+                                 ).named('pyemma-invca-2')
+
+        inv_modeller_5 = PyEMMAAnalysis(engine_5, 'protein', inv_ca_features
+                                 ).named('pyemma-invca-5')
+
         project.generators.add(ca_modeller_2)
         project.generators.add(all_modeller_2)
+        project.generators.add(inv_modeller_2)
         project.generators.add(ca_modeller_5)
         project.generators.add(all_modeller_5)
+        project.generators.add(inv_modeller_5)
         project.generators.add(engine_2)
         project.generators.add(engine_5)
 

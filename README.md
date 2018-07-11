@@ -53,10 +53,16 @@ Usage:
 python runmaker.py testrun ntl9 -w $ADMDRP_ENV_ACTIVATE -P CPU -M pyemma-ionic -N 5 -x 1 -b 1 -l 100 -k 200 -p 2 -m 10
 
 
-# SOMEDAY TITAN will stop changing
+# Conda-based environment activation
 python runmaker.py testrun ntl9 -A $TASKCONDAPATH -e admdenv -P CPU -M pyemma-ionic -t 8 -N 5 -x 1 -b 1 -l 100 -k 200 -p 2 -m 10
 
 python runmaker.py testrun lignin -A $TASKCONDAPATH -e admdenv -P CPU -M pyemma-ionic -t 8 -N 5 -x 1 -b 1 -l 100000 -k 100000 -p 2000 -m 10000
+
+# Bach to virtualenv
+python runmaker.py chignolin chignolin -w $ADMDRP_ENV_ACTIVATE  -P CUDA -M pyemma-ionic -t 8 -N 5 -x 1 -b 3 -l 100000 -k 100000 -p 2000 -m 10000
+ 
+# Production Parameters
+python runmaker.py chignolin chignolin -w $ADMDRP_ENV_ACTIVATE  -P CUDA -M pyemma-ionic -t 12 -N 160 -x 1 -b 1 -l 8000000 -k 8000000 -p 10000 -m 40000
 
 
 

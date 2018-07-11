@@ -32,6 +32,9 @@ def argparser():
     parser.add_argument("-M","--modeller",
         help="Create a model each iteration", type=stripper)
 
+    parser.add_argument("--rp", action="store_true",
+        help="Use RP" )
+
     parser.add_argument("-x","--n-extension", dest="n_ext",
         help="Number of extensions to trajectories",
         type=int, default=1)
@@ -111,9 +114,9 @@ def argparser():
         help="Filename of strategy script to run for generating tasks",
         default="run_admd.py", type=stripper)
 
-    parser.add_argument("-S","--sampling_function",
+    parser.add_argument("-S","--sampling_method",
         help="Name of sampling function saved in sampling_functions.py",
-        default="random_restart", type=stripper)
+        default="explore_macrostates", type=stripper)
 
     parser.add_argument("-i","--template", dest="template",
         help="Input job template file, ie admd_workers.pbs",

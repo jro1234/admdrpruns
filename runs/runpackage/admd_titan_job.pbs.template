@@ -1,0 +1,236 @@
+#!/bin/bash
+#PBS -A bip149
+#PBS -N admd
+#PBS -l nodes={nodes}
+#PBS -l walltime={hours}:{minutes}:00
+#PBS -e admd.stderr
+#PBS -o admd.stdout
+#PBS -l gres=atlas1
+
+
+echo -e "\n\nStarting an AdaptiveMD Job\n------------------------\n\n"
+
+#####################################################
+# Job setup, forward file limits for DB scalability #
+#####################################################
+export APRUN_XFER_LIMITS=1
+cd $PBS_O_WORKDIR
+
+# Moving files around, first need to check then number
+# of iterations we have already done. 
+# We will move the previous final job files there
+# before we start doing other stuff in this job since
+# these aren't moved at the end of a job.
+max=0
+
+for dir in ./*
+do
+  if [[ -d $dir ]];
+  then
+    if [[ $dir == *"round"* ]]
+    then
+      IFS='round' read -ra i <<< "$dir"
+      for int in "${{i[@]}}"
+      do
+        if [[ $int =~ ^-?[0-9]+$ ]]
+        then
+          if (( 10#${{int}} > 10#${{max}} ))
+          then
+            max=$int
+          fi
+        fi
+      done
+    fi
+  fi
+done
+
+mv admd.stderr round$max
+mv admd.stdout round$max
+
+next=$(( 10#${{max}} + 1 ))
+if (( $next < 1000 ))
+then
+  if (( $next < 100 ))
+  then
+    if (( $next < 10 ))
+    then
+      next=000$next
+    else
+      next=00$next
+    fi
+  else
+    next=0$next
+  fi
+fi
+
+nextround=round$next
+echo "Next Round Folder Name: ${{nextround}}"
+mkdir ./$nextround
+
+
+
+## To use python 2.7 environment
+#export PATH=$CONDAPATH:$PATH
+VIRTUALENV={virtualenv}
+CONDAENV="{environment} {activate_prefix}"
+
+ACTIVATE_ENV=
+DEACTIVATE_ENV=
+if [[ ! -z "$VIRTUALENV" ]]; then
+  ACTIVATE_ENV=$VIRTUALENV
+  DEACTIVATE_ENV=deactivate
+elif [[ ! -z "$CONDAENV" ]]; then
+  ACTIVATE_ENV=$CONDAENV
+  DEACTIVATE_ENV="source deactivate"
+fi
+
+if [[ ! -z "$ACTIVATE_ENV" ]]; then
+  echo "source $ACTIVATE_ENV"
+  source $ACTIVATE_ENV
+fi
+
+#source activate py27
+echo "Using this python:"
+which python
+echo "This is the adaptivemdworker used for the job"
+which adaptivemdworker
+pwd
+
+#####################################################
+#  AdaptiveMD Project Name of the run for workers   #
+#     must match project name in database           #
+#####################################################
+RUNNAME={project_name}
+
+SCRIPT_NAME={strategy}
+ADMD_SCRIPT=${{ADMDRP_RUNS}}scripts/$SCRIPT_NAME
+
+#####################################################
+#       Setting up compute Environment and Workers  #
+#####################################################
+#
+#  Node Usage:
+#
+#    1    : MongoDB Host Node
+#    N-1  : AdaptiveMD Workers
+#
+#
+#   - the n_workers and w_threads from jobmaker
+#     aren't actually used, they just print to
+#     fields in the shell script comments
+#
+N_NODES={nodes}
+N_WORKERS=$(($N_NODES-1))
+N_TRAJ=$(($N_NODES-2))
+
+NM_SYSTEM={system_name}
+PLATFORM={platform}
+MIN_TRAJLENGTH={minlength}
+TASK_TRAJLENGTH={n_steps}
+P_FRAMES={prot}
+M_FRAMES={all}
+N_ROUND={n_rounds}
+N_EXT={n_ext}
+NM_MODELLER={modeller}
+FUNC_SAMPLING={sampling_method}
+LONGTS={longts}
+REINIT={reinit}
+
+OMP_NUM_THREADS={threads}
+N_THREADS_WORKER=$(($OMP_NUM_THREADS-1))
+# later can calcultae with mpi workers
+#N_THREADS_WORKER={{w_threads}}
+#N_WORKERS={{n_workers}}
+#MPI_PER_NODE=$(($OMP_NUM_THREADS/$N_THREADS_WORKER))
+MPI_PER_NODE=1
+
+echo "Number of workers: $N_WORKERS"
+echo "Number of threads: $OMP_NUM_THREADS"
+
+#####################################################
+#####################################################
+#####           MongoDB Host Setup              #####
+#####################################################
+#####################################################
+echo $ADMD_DB
+which mongod
+
+mkdir ${{ADMD_DB}}data/$RUNNAME.db/
+aprun -n1 -N1 -d$OMP_NUM_THREADS ./startdb.sh $RUNNAME $N_WORKERS & MONGO_APID=$!
+echo $MONGO_APID
+# Must wait for mongo node to write hostname and start up
+sleep 15
+DB_HOSTNAME=`cat $RUNNAME.hostname`
+echo "MongoDB Hostname for $RUNNAME: $DB_HOSTNAME"
+export ADMD_DBURL="mongodb://$DB_HOSTNAME:27017/"
+echo $ADMD_DBURL
+
+#####################################################
+#####################################################
+#####           ADAPTIVEMD PROJECT              #####
+#####################################################
+#####################################################
+echo "Initializing project"
+python $ADMD_SCRIPT $RUNNAME $NM_SYSTEM $REINIT --init_only --dbhost $DB_HOSTNAME -P $PLATFORM -p $P_FRAMES -m $M_FRAMES
+
+#####################################################
+#####################################################
+#####           ADAPTIVEMD TASKS                #####
+#####################################################
+#####################################################
+echo "Starting Workflow for run '$RUNNAME' with Strategy Function:"
+echo $ADMD_SCRIPT
+python $ADMD_SCRIPT $RUNNAME $NM_SYSTEM --dbhost $DB_HOSTNAME $LONGTS -e $ACTIVATE_ENV -l $TASK_TRAJLENGTH -k $MIN_TRAJLENGTH -N $N_TRAJ -S $FUNC_SAMPLING -b $N_ROUND -x $N_EXT -M $NM_MODELLER -p $P_FRAMES -m $M_FRAMES & EVENT_PID=$!
+
+###############################################################
+#       ADAPTIVEMD WORKERS
+# launch workers who write stdout/err to job directory
+###############################################################
+aprun -n$N_WORKERS -N$MPI_PER_NODE -d$N_THREADS_WORKER ./startworker.sh $RUNNAME $DB_HOSTNAME $N_WORKERS $N_THREADS_WORKER $ACTIVATE_ENV 2> $RUNNAME.err 1> $RUNNAME.out & WORKERS_APID=$!
+
+###############################################################
+#       FINISHING TOUCHES
+###############################################################
+echo "Done launching workers, now waiting"
+echo "Waiting for event scripts to terminate"
+wait "$EVENT_PID"
+
+echo "Waiting for workers to shut down"
+wait "$WORKERS_APID"
+sleep 10
+
+echo "Going to shut down the database, event is finished"
+kill "$MONGO_APID"
+sleep 10
+
+if [[ ! -z "$DEACTIVATE_ENV" ]]; then
+  echo $DEACTIVATE_ENV
+  $DEACTIVATE_ENV
+fi
+
+wait
+
+# Moving files to the storage directory for this
+# iteration of adaptive sampling.
+mv *log *name *err *out $nextround
+
+stopping=false
+for file in ./*
+do
+  if [[ -f $file ]];
+  then
+    if [[ $file == *"stopjob"* ]]
+    then
+      stopping=true
+    fi
+  fi
+done
+
+if [ $stopping = false ]
+then
+  echo "Continuing with another job"
+  qsub admd_titan_job.pbs
+else
+  echo 'Found a "stopjob" file, not submitting another job'
+fi
+

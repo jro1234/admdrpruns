@@ -26,11 +26,10 @@ from __run_admd import init_project, strategy_function, get_logger, formatline
 #dump_finalize_timestamps = False
 dump_finalize_timestamps = True
 if dump_finalize_timestamps:
-    from pull_final_timestamps import pull_final_timestamps
+    from __run_tools import pull_final_timestamps
     from pprint import pformat
 
-from adaptivemd.rp.client import Client
-from adaptivemd import Task
+from adaptivemd import Task, TrajectoryGenerationTask, TrajectoryExtensionTask
 import sys
 import time
 
@@ -46,7 +45,7 @@ final_states = Task.FINAL_STATES + Task.RESTARTABLE_STATES
 task_done = lambda ta: ta.state in final_states
 
 
-def calculate_request(size_workload, n_workloads, n_steps, steprate=12000):
+def calculate_request(size_workload, n_workloads, n_steps, steprate=1000):
     '''
     Calculate the parameters for resource request done by RP.
     The workload to execute will be assessed to estimate these
@@ -89,18 +88,25 @@ def calculate_request(size_workload, n_workloads, n_steps, steprate=12000):
 
     # 5 minutes padding for initialization & such
     # as the minimum walltime
-    wallminutes = 10 + int(float(n_steps) * n_workloads / steprate)
+    wallminutes = 15 + int(float(n_steps) * n_workloads / steprate)
+
     return cpus, nodes, wallminutes, gpus 
 
 
 if __name__ == '__main__':
 
     project = None
+    sleeptime = 1
 
     try:
 
-        parser = argparser()
-        args = parser.parse_args()
+        parser   = argparser()
+        args     = parser.parse_args()
+
+        using_rp = args.rp
+
+        if using_rp:
+            from adaptivemd.rp.client import Client
 
         logger.info("Initializing Project named: " + args.project_name)
         # send selections and frequencies as kwargs
@@ -120,12 +126,19 @@ if __name__ == '__main__':
 
         logger.info("AdaptiveMD dburl: {}".format(project.storage._db_url))
 
+        steprate = 1000
+        if args.system_name.startswith('chignolin'):
+            steprate = 15000
+        elif args.system_name.startswith('ntl9'):
+            steprate = 11000
+        if  args.longts:
+            steprate *= 2
 
         if args.init_only:
             logger.info("Leaving project '{}' initialized without tasks".format(project.name))
 
         else:
-            logger.info("Adding event to project from function: {0}, {1}".format(project.name, strategy_function))
+            logger.info("Adding event to project: {0}".format(project.name))
 
             if  args.longts:
                 ext = '-5'
@@ -133,66 +146,120 @@ if __name__ == '__main__':
                 ext = '-2'
 
             nm_engine = 'openmm' + ext
-            nm_modeller = args.modeller + ext
-
             engine = project.generators[nm_engine]
-            modeller = project.generators[nm_modeller]
 
+            # implement `get` method on `Bundle` and return None if no match
+            n_traj   = args.n_traj
+            n_rounds = args.n_rounds
+            length   = args.length
+            modeller = None
+            if args.modeller:
+                nm_modeller = args.modeller + ext
+                modeller = project.generators[nm_modeller]
+
+            if not n_traj:
+                if not modeller:
+                    # TODO FIXME this is not acceptable for general use...
+                    #fixit_states = {'pending','running','cancelled'}
+                    fixit_states = {'pending','running'}
+                    while fixit_states:
+                        fix_state = fixit_states.pop()
+                        project.tasks._set._document.update_many({"state": fix_state,"_cls":"TrajectoryGenerationTask"}, {"$set":{"state":"created","__dict__.state":"created"}})
+                    new_tasks = list(project.tasks.c(TrajectoryGenerationTask).m('state','created')) \
+                                +  list(project.tasks.c(TrajectoryExtensionTask).m('state','created'))
+                    if not new_tasks:
+                        print ("Nothing to clean up, exiting")
+                        sys.exit(0)
+                    n_rounds  = 1
+                    n_traj    = len(new_tasks)
+                    length    = max(map(lambda ta: ta.trajectory.length, new_tasks))
+                else:
+                    # FIXME TODO need a 'held' state for tasks so holdovers in 'created'
+                    #            state don't start when we're looking to do a model task
+                    pass
+
+
+            # TODO add rp definition
+            print "CALCULATING REQUEST"
+            #print args.n_traj, args.modeller, int(bool(args.modeller))
             cpus, nodes, walltime, gpus = calculate_request(
-                                          args.n_traj+1,
-                                          args.n_rounds,
-                                          args.length)#, steprate)
+                                          n_traj + int(bool(modeller)),
+                                          n_rounds,
+                                          length,
+                                          steprate,
+                                          )
 
-            project.request_resource(cpus, walltime, gpus, 'current')
-
-            client = Client(project.storage._db_url, project.name)
-            client.start()
+            sfkwargs = dict()
+            sfkwargs['num_macrostates'] = 25
 
             logger.info(formatline("\nResource request arguments: \ncpus: {0}\nwalltime: {1}\ngpus: {2}".format(cpus, walltime, gpus)))
             logger.info("n_rounds: {}".format(args.n_rounds))
 
 
-            # Tasks not in this list will be checked for
-            # a final status before stopping RP Client
-            existing_tasks = [uuid(ta) for ta in project.tasks]
+            if args.n_traj or args.modeller:
+                # Tasks not in this list will be checked for
+                # a final status before stopping RP Client
+                existing_tasks = [uuid(ta) for ta in project.tasks]
 
-            logger.info(formatline("TIMER Project event adding {0:.5f}".format(time.time())))
+                logger.info("Project event adding from {}".format(strategy_function))
+                logger.info(formatline("TIMER Project event adding {0:.5f}".format(time.time())))
 
-            project.add_event(strategy_function(
-                project, engine, args.n_traj,
-                args.n_ext, args.length,
-                modeller=modeller,
-                fixedlength=True,#args.fixedlength,
-                minlength=args.minlength,
-                n_rounds=args.n_rounds,
-                environment=args.environment,
-                activate_prefix=args.activate_prefix,
-                virtualenv=args.virtualenv,
-                longest=args.all,
-                cpu_threads=args.threads,
-                batchsleep=args.batchsleep,
-                batchsize=args.batchsize,
-                batchwait=args.batchwait,
-                progression=args.progression,
-                ))
+                project.add_event(strategy_function(
+                    project, engine, n_traj,
+                    args.n_ext, length,
+                    modeller=modeller,
+                    fixedlength=True,#args.fixedlength,
+                    minlength=args.minlength,
+                    n_rounds=n_rounds,
+                    environment=args.environment,
+                    activate_prefix=args.activate_prefix,
+                    virtualenv=args.virtualenv,
+                    longest=args.all,
+                    cpu_threads=args.threads,
+                    sampling_method=args.sampling_method,
+                    batchsleep=args.batchsleep,
+                    batchsize=args.batchsize,
+                    batchwait=args.batchwait,
+                    progression=args.progression,
+                    sfkwargs=sfkwargs,
+                    ))
+
+                new_tasks = filter(lambda ta: uuid(ta) not in existing_tasks, project.tasks)
+            else:
+                logger.info("Project event adding from incomplete tasks\n{}".format(new_tasks))
+                sleeptime = 20
+                # FIXME this event finishes immediately for some reason...
+                #         - event usage description needed
+                project.add_event(all([ta.is_done() for ta in new_tasks]))
+
+            if using_rp:
+                logger.info("starting RP client for workflow execution")
+                project.request_resource(cpus, walltime, gpus, 'current')
+                client = Client(project.storage._db_url, project.name)
+                client.start()
 
             logger.info(formatline("TIMER Project event added {0:.5f}".format(time.time())))
             logger.info("TRIGGERING PROJECT")
             project.wait_until(project.events_done)
             logger.info(formatline("TIMER Project event done {0:.5f}".format(time.time())))
-
-            new_tasks = filter(lambda ta: uuid(ta) not in existing_tasks, project.tasks)
-
             done = False
             while not done:
                 logger.info("Waiting for final state assignments to new states")
-                time.sleep(1)
+                time.sleep(sleeptime)
                 if all([task_done(ta) for ta in new_tasks]):
                     done = True
                     logger.info("All new tasks finalized")
                     logger.info(formatline("TIMER Project tasks checked {0:.5f}".format(time.time())))
 
-            client.stop()
+            if using_rp:
+                client.stop()
+            else:
+                logger.info("TRYING TO SHUTDOWN WORKERS")
+                logger.info(project.workers.all)
+                project.workers.all.execute('shutdown')
+                #[setattr(w,'state','down') for w in project.workers]
+                logger.info(project.workers.all)
+
             project.resources.consume_one()
 
     except KeyboardInterrupt:
@@ -201,6 +268,7 @@ if __name__ == '__main__':
     finally:
 
         if project:
+            project.resources.consume_one()
             project.close()
             if not args.init_only and dump_finalize_timestamps:
                 final_timestamps = pull_final_timestamps(project)
